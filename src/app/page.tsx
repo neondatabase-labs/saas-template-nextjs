@@ -1,74 +1,58 @@
-import { Header } from '@/app/header';
-import Image from 'next/image';
+import { Header } from "@/app/header"
+import { addDays } from "date-fns"
+import { TodoList } from "./todo-list"
 
-export default function Home() {
+export default async function Home() {
+  const deadlines = [
+    {
+      id: "1",
+      title: "Project Proposal",
+      description: "Submit the final project proposal to the client",
+      dueDate: addDays(new Date(), 2),
+    },
+    {
+      id: "2",
+      title: "Team Meeting",
+      description: "Weekly team sync to discuss progress",
+      dueDate: new Date(),
+    },
+    {
+      id: "3",
+      title: "Budget Report",
+      description: "Complete the Q1 budget report",
+      dueDate: new Date(2025, 2, 1),
+    },
+    {
+      id: "4",
+      title: "Client Presentation",
+      description: "Present the final designs to the client",
+      dueDate: new Date(2025, 2, 4),
+    },
+  ]
+
   return (
-    <div className="grid grid-rows-[auto_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)] relative mx-auto lg:max-w-none">
-      <Header />
-      
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start relative z-10">
-        
-        <header className='flex flex-col gap-2 items-start max-w-xl'>
-          <h1 className="font-title text-[48px] font-medium leading-none -tracking-[0.03em] text-white xl:text-[48px] lg:text-[32px] sm:text-[32px]">Neon Auth </h1>
-          <p className='text-medium mt-0'>Effortless Authentication for Modern Apps!</p>
-        </header>
-        <section className='flex flex-col gap-4 mx-auto max-w-xl'>
-          <p className="text-sm text-gray-300 mb-4">
-            This example app allows users to create a user account. When a user creates an account, their data is automatically synced to your Neon database. Create an account via the sign up button above to try it yourself.
-          </p>
-          <p className="text-sm text-gray-300 mb-4">
-            Neon Auth connects <a
-              className="hover:underline hover:underline-offset-4
-              text-primary-1 hover-text-[#00e5bf]"
-              href="https://stack-auth.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >Stack Auth</a> to your Neon database, automatically synchronizing user profiles so that you own your auth data. Access your user data directly in your database environment, with no custom integration code needed.
-          </p>
-        </section>
+    // 1px gap in the grid to reveal the background below, makes it look like visible grid lines
+    <div className="grid gap-[1px] bg-black/5 grid-cols-[1fr_minmax(0,_800px)_1fr] min-h-screen  font-[family-name:var(--font-geist-sans)] ">
+      {/* Header row */}
+      <div className="bg-white" />
+      <div className="bg-white">
+        <Header />
+      </div>
+      <div className="bg-white" />
 
-        
-        <ol className="list-inside text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            <a
-              className="flex items-center gap-2 hover:underline hover:underline-offset-4 text-primary-1 hover-text-[#00e5bf]"
-              href="https://neon.tech/docs/guides/neon-auth?utm_source=neon-auth-nextjs-template&utm_campaign=neon-auth"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Neon Auth documentation →
-            </a>
-          </li>
-          <li className="mb-2">
-            <a
-              className="flex items-center gap-2 hover:underline hover:underline-offset-4 text-primary-1 hover-text-[#00e5bf]"
-              href="https://docs.stack-auth.com/overview"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Stack Auth documentation →
-            </a>
-          </li>
-        </ol>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://neon.tech?utm_source=neon-auth-nextjs-template&utm_campaign=neon-auth"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to neon.tech →
-        </a>
-      </footer>
+      {/* Content row  */}
+      <div className="bg-white" />
+      <div className="bg-white">
+        <TodoList deadlines={deadlines} />
+      </div>
+      <div className="bg-white" />
+
+      {/* Footer row */}
+      <div className="bg-white" />
+      <div className="bg-white">
+        <footer> Template </footer>
+      </div>
+      <div className="bg-white" />
     </div>
-  );
+  )
 }
