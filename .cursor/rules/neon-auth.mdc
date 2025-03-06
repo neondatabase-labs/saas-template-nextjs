@@ -1,0 +1,98 @@
+---
+description: Use these rules to relate your database data with your Auth users information
+globs: *.tsx, *.ts
+---
+<neon_auth_guidelines>
+
+  <overview>
+    These guidelines explain how to properly integrate and use Neon Auth for user authentication and management within your application.
+  </overview>
+  
+  <database_schema>
+    <schema_name>neon_auth</schema_name>
+    <primary_table>users_sync</primary_table>
+    <table_structure>
+      <column name="raw_json" type="JSONB" nullable="false" description="Complete user data in JSON format" />
+      <column name="id" type="TEXT" nullable="false" primary_key="true" description="Unique user identifier" />
+      <column name="name" type="TEXT" nullable="true" description="User's display name" />
+      <column name="email" type="TEXT" nullable="true" description="User's email address" />
+      <column name="created_at" type="TIMESTAMP WITH TIME ZONE" nullable="true" description="When the user was created" />
+      <column name="deleted_at" type="TIMESTAMP WITH TIME ZONE" nullable="true" description="When the user was deleted (if applicable)" />
+    </table_structure>
+    <indexes>
+      <index name="users_sync_deleted_at_idx" columns="deleted_at" purpose="Quickly identify deleted users" />
+    </indexes>
+    <creation_sql>
+```sql
+-- Create schema if it doesn't exist
+CREATE SCHEMA IF NOT EXISTS neon_auth;
+
+-- Create the users_sync table
+CREATE TABLE neon_auth.users_sync (
+    raw_json JSONB NOT NULL,
+    id TEXT NOT NULL,
+    name TEXT,
+    email TEXT,
+    created_at TIMESTAMP WITH TIME ZONE,
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id)
+);
+
+-- Create index on deleted_at
+CREATE INDEX users_sync_deleted_at_idx ON neon_auth.users_sync (deleted_at);
+```
+    </creation_sql>
+  </database_schema>
+  
+  <usage>
+    <querying_users>
+      <description>How to fetch active users from Neon Auth</description>
+      <example>
+```sql
+SELECT * FROM neon_auth.users_sync WHERE deleted_at IS NULL;
+```
+      </example>
+    </querying_users>
+    
+    <relating_with_app_data>
+      <description>How to join user data with application tables</description>
+      <example>
+```sql
+SELECT 
+  t.*,
+  u.id AS user_id,
+  u.name AS user_name,
+  u.email AS user_email
+FROM 
+  public.todos t
+LEFT JOIN 
+  neon_auth.users_sync u ON t.owner = u.id
+WHERE 
+  u.deleted_at IS NULL
+ORDER BY 
+  t.id;
+```
+      </example>
+    </relating_with_app_data>
+  </usage>
+  
+  <best_practices>
+    <practice>
+      <rule>Always use LEFT JOIN when relating with neon_auth.users_sync</rule>
+      <rationale>Ensures queries work even if user records are missing</rationale>
+    </practice>
+    <practice>
+      <rule>Always filter out users with deleted_at IS NOT NULL</rule>
+      <rationale>Prevents deleted user accounts from appearing in queries</rationale>
+    </practice>
+    <practice>
+      <rule>Never create Foreign Key constraints pointing to neon_auth.users_sync</rule>
+      <rationale>User management happens externally and could break referential integrity</rationale>
+    </practice>
+    <practice>
+      <rule>Never insert users directly into the neon_auth.users_sync table</rule>
+      <rationale>User creation and management must happen through the Auth system</rationale>
+    </practice>
+  </best_practices>
+
+</neon_auth_guidelines>
