@@ -1,7 +1,12 @@
-import "server-only";
+import "server-only"
 
-import { StackServerApp } from "@stackframe/stack";
+import { StackServerApp } from "@stackframe/stack"
+import { remember } from "@epic-web/remember"
 
-export const stackServerApp = new StackServerApp({
-  tokenStore: "nextjs-cookie",
-});
+export const stackServerApp = remember(
+  "stack-server",
+  () =>
+    new StackServerApp({
+      tokenStore: "nextjs-cookie",
+    }),
+)

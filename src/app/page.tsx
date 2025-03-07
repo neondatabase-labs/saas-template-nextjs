@@ -1,58 +1,39 @@
-import { Header } from "@/app/header"
-import { addDays } from "date-fns"
-import { TodoList } from "./todo-list"
+import { ActiveDeadlines } from "@/app/active-deadlines"
+import {
+  addDeadline,
+  getDeadlines,
+  toggleDeadlineComplete,
+} from "./actions/deadline-actions"
+import { isToday, isPast } from "date-fns"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 export default async function Home() {
-  const deadlines = [
-    {
-      id: "1",
-      title: "Project Proposal",
-      description: "Submit the final project proposal to the client",
-      dueDate: addDays(new Date(), 2),
-    },
-    {
-      id: "2",
-      title: "Team Meeting",
-      description: "Weekly team sync to discuss progress",
-      dueDate: new Date(),
-    },
-    {
-      id: "3",
-      title: "Budget Report",
-      description: "Complete the Q1 budget report",
-      dueDate: new Date(2025, 2, 1),
-    },
-    {
-      id: "4",
-      title: "Client Presentation",
-      description: "Present the final designs to the client",
-      dueDate: new Date(2025, 2, 4),
-    },
-  ]
+  const deadlines = await getDeadlines()
+  const filteredDeadlines = deadlines.filter((deadline) => {
+    if (isToday(deadline.dueDate)) return true
+    if (isPast(deadline.dueDate) && deadline.completed) return false
+    return true
+  })
 
   return (
-    // 1px gap in the grid to reveal the background below, makes it look like visible grid lines
-    <div className="grid gap-[1px] bg-black/5 grid-cols-[1fr_minmax(0,_800px)_1fr] min-h-screen  font-[family-name:var(--font-geist-sans)] ">
-      {/* Header row */}
+    <>
       <div className="bg-white" />
-      <div className="bg-white">
-        <Header />
+      <div className="flex justify-between items-center bg-white px-4 py-2">
+        <div className="flex items-center gap-2">
+          <h1 className="text-3xl font-bold">Deadlines</h1>
+          <Button asChild variant="outline" size="sm" className="text-xs">
+            <Link href="/history">View History</Link>
+          </Button>
+        </div>
       </div>
       <div className="bg-white" />
 
-      {/* Content row  */}
-      <div className="bg-white" />
-      <div className="bg-white">
-        <TodoList deadlines={deadlines} />
-      </div>
-      <div className="bg-white" />
-
-      {/* Footer row */}
-      <div className="bg-white" />
-      <div className="bg-white">
-        <footer> Template </footer>
-      </div>
-      <div className="bg-white" />
-    </div>
+      <ActiveDeadlines
+        deadlines={filteredDeadlines}
+        addDeadlineAction={addDeadline}
+        toggleCompleteAction={toggleDeadlineComplete}
+      />
+    </>
   )
 }
