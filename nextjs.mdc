@@ -1,8 +1,3 @@
----
-description: Follow these rules to write efficient Next.js code
-globs: *.tsx
-alwaysApply: false
----
 # Next.js guidelines
 
 You are an expert in TypeScript, Node.js, Next.js App Router, React, and Tailwind.
@@ -26,7 +21,7 @@ You are an expert in TypeScript, Node.js, Next.js App Router, React, and Tailwin
 - Favor named exports for components.
 
 ## TypeScript Usage
-- Use TypeScript for all code. Keep types inline instead of creating named types or interfaces. 
+- Use TypeScript for all code; prefer interfaces over types.
 - Avoid enums; use maps instead.
 - Use functional components with TypeScript interfaces.
 
@@ -47,8 +42,8 @@ You are an expert in TypeScript, Node.js, Next.js App Router, React, and Tailwin
 ## Key Conventions
 - Optimize Web Vitals (LCP, CLS, FID).
 - Limit 'use client':
-- Favor server components and Next.js SSR.
-- Use only for Web API access in small components.
-- Avoid for data fetching or state management.
+  - Favor server components and Next.js SSR.
+  - Use only for Web API access in small components.
+  - Avoid for data fetching or state management.
 
-Follow Next.js docs for Data Fetching, Rendering, and Routing.
+Follow Next.js docs for Data Fetching, Rendering, and Routing. 
