@@ -52,7 +52,9 @@
     "node": ">=18"
   },
   "prettier": {
+    "printWidth": 100,
     "semi": false,
-    "trailingComma": "all"
+    "trailingComma": "all",
+    "useTabs": true
   }
 }
