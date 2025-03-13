@@ -584,395 +584,387 @@ export function TodoPage({ todos, projects, users }: TodoPageProps) {
 		selectedUserFilter !== null ? users.find((u) => u.id === selectedUserFilter) : null
 
 	return (
-		<div className="container max-w-6xl mx-auto py-8 px-4">
-			<div className="space-y-6">
-				{/* Header */}
-				<div className="flex justify-between items-center">
-					<div className="flex items-center gap-3">
-						<h1 className="text-2xl font-semibold">Active Todos</h1>
-						{selectedProject && (
-							<div className="flex items-center gap-2">
-								<span className="text-muted-foreground">in</span>
-								<ProjectBadge project={selectedProject} />
-							</div>
-						)}
-						{selectedUser && (
-							<div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted">
-								<UserAvatar user={selectedUser} showName />
-							</div>
-						)}
-					</div>
-					<div className="flex items-center gap-2 text-sm text-muted-foreground">
-						<div className="flex -space-x-1">
-							<div className="h-3 w-3 rounded-full bg-green-500" />
-							<div className="h-3 w-3 rounded-full bg-yellow-500" />
-							<div className="h-3 w-3 rounded-full bg-red-500" />
+		<div className="space-y-6">
+			{/* Header */}
+			<div className="flex justify-between items-center">
+				<div className="flex items-center gap-3">
+					<h1 className="text-2xl font-semibold">Active Todos</h1>
+					{selectedProject && (
+						<div className="flex items-center gap-2">
+							<span className="text-muted-foreground">in</span>
+							<ProjectBadge project={selectedProject} />
 						</div>
-						<span>Status</span>
-						<span className="px-2 py-1 rounded-full bg-muted">
-							{completedCount}/{totalCount}
-						</span>
-					</div>
-				</div>
-
-				{/* Search, Filter, and Add */}
-				<div className="flex flex-wrap gap-4">
-					<div className="relative flex-1 min-w-[200px]">
-						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-						<Input
-							type="text"
-							placeholder="Search todos..."
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
-							className="pl-9"
-						/>
-					</div>
-
-					<div className="flex gap-2">
-						<ProjectSelector
-							projects={optimisticProjects}
-							selectedProjectId={selectedProjectFilter}
-							onSelectProject={setSelectedProjectFilter}
-							onProjectAdded={handleProjectAdded}
-							triggerClassName="min-w-[150px]"
-						/>
-
-						{selectedProjectFilter !== null && (
-							<Button
-								variant="ghost"
-								size="icon"
-								onClick={() => setSelectedProjectFilter(null)}
-								title="Show all projects"
-							>
-								<Layers className="h-4 w-4" />
-								<span className="sr-only">Show all projects</span>
-							</Button>
-						)}
-					</div>
-
-					<div className="flex gap-2">
-						<UserSelector
-							users={users}
-							selectedUserId={selectedUserFilter}
-							onSelectUser={setSelectedUserFilter}
-							triggerClassName="min-w-[150px]"
-						/>
-
-						{selectedUserFilter !== null && (
-							<Button
-								variant="ghost"
-								size="icon"
-								onClick={() => setSelectedUserFilter(null)}
-								title="Show all users"
-							>
-								<Layers className="h-4 w-4" />
-								<span className="sr-only">Show all users</span>
-							</Button>
-						)}
-					</div>
-
-					<Dialog open={isAddTodoOpen} onOpenChange={setIsAddTodoOpen}>
-						<DialogTrigger asChild>
-							<Button>
-								<Plus className="h-4 w-4 mr-2" />
-								Add Todo
-							</Button>
-						</DialogTrigger>
-						<DialogContent>
-							<DialogHeader>
-								<DialogTitle>Add New Todo</DialogTitle>
-							</DialogHeader>
-							<AddTodoForm
-								onAddTodo={addOptimisticTodo}
-								onClose={() => setIsAddTodoOpen(false)}
-								projects={optimisticProjects}
-								users={users}
-								onProjectAdded={handleProjectAdded}
-							/>
-						</DialogContent>
-					</Dialog>
-				</div>
-
-				{/* Todo list */}
-				<div className="border rounded-lg overflow-hidden">
-					{/* Card Header with Bulk Actions */}
-					<div className="flex items-center justify-between p-3 bg-muted/50 border-b">
-						{selectedCount > 0 ? (
-							<>
-								{/* Selection Mode Header */}
-								<div className="flex items-center gap-3">
-									<Checkbox
-										id="select-all"
-										checked={allSelected && filteredTodos.length > 0}
-										onCheckedChange={toggleSelectAll}
-										disabled={filteredTodos.length === 0}
-									/>
-									<label
-										htmlFor="select-all"
-										className="text-sm font-medium flex items-center gap-2"
-									>
-										<CheckSquare className="h-4 w-4" />
-										<span>{selectedCount} selected</span>
-									</label>
-								</div>
-								<div className="flex items-center gap-2">
-									<Button
-										variant="outline"
-										size="sm"
-										disabled={isPending}
-										className="flex items-center gap-1"
-										onClick={() => toggleSelectedTodosCompleted(true)}
-									>
-										<CheckCircle className="h-4 w-4 mr-1" />
-										Mark Complete
-									</Button>
-
-									<Button
-										variant="outline"
-										size="sm"
-										disabled={isPending}
-										className="flex items-center gap-1"
-										onClick={() => toggleSelectedTodosCompleted(false)}
-									>
-										<Circle className="h-4 w-4 mr-1" />
-										Mark Incomplete
-									</Button>
-
-									<Popover>
-										<PopoverTrigger asChild>
-											<Button
-												variant="outline"
-												size="sm"
-												disabled={isPending}
-												className="flex items-center gap-1"
-											>
-												<User className="h-4 w-4 mr-1" />
-												Assign To
-											</Button>
-										</PopoverTrigger>
-										<PopoverContent className="w-auto p-0" align="end">
-											<div className="p-2 border-b">
-												<h3 className="text-sm font-medium">
-													Assign {selectedCount} item
-													{selectedCount !== 1 ? "s" : ""} to User
-												</h3>
-											</div>
-											<div className="p-2">
-												<UserSelector
-													users={users}
-													selectedUserId={null}
-													onSelectUser={(userId) => {
-														assignSelectedTodosToUser(userId)
-													}}
-													triggerClassName="w-full justify-start"
-												/>
-											</div>
-										</PopoverContent>
-									</Popover>
-
-									<Popover>
-										<PopoverTrigger asChild>
-											<Button
-												variant="outline"
-												size="sm"
-												disabled={isPending}
-												className="flex items-center gap-1"
-											>
-												<Tag className="h-4 w-4 mr-1" />
-												Move to Project
-											</Button>
-										</PopoverTrigger>
-										<PopoverContent className="w-auto p-0" align="end">
-											<div className="p-2 border-b">
-												<h3 className="text-sm font-medium">
-													Move {selectedCount} item
-													{selectedCount !== 1 ? "s" : ""} to Project
-												</h3>
-											</div>
-											<div className="p-2">
-												<ProjectSelector
-													projects={optimisticProjects}
-													selectedProjectId={null}
-													onSelectProject={(projectId) => {
-														moveSelectedTodosToProject(projectId)
-													}}
-													onProjectAdded={handleProjectAdded}
-													triggerClassName="w-full justify-start"
-												/>
-											</div>
-										</PopoverContent>
-									</Popover>
-
-									<Popover
-										open={isRescheduleCalendarOpen}
-										onOpenChange={setIsRescheduleCalendarOpen}
-									>
-										<PopoverTrigger asChild>
-											<Button
-												variant="outline"
-												size="sm"
-												disabled={isPending}
-												className="flex items-center gap-1"
-											>
-												<Clock className="h-4 w-4 mr-1" />
-												Reschedule
-											</Button>
-										</PopoverTrigger>
-										<PopoverContent className="w-auto p-0" align="end">
-											<div className="p-2 border-b">
-												<h3 className="text-sm font-medium">
-													Reschedule {selectedCount} item
-													{selectedCount !== 1 ? "s" : ""}
-												</h3>
-											</div>
-											<CalendarComponent
-												mode="single"
-												selected={rescheduleDate}
-												onSelect={(date) => {
-													setRescheduleDate(date)
-												}}
-												initialFocus
-											/>
-											<div className="p-2 border-t flex justify-between">
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() => {
-														rescheduleSelectedTodos(null)
-														setIsRescheduleCalendarOpen(false)
-													}}
-												>
-													Clear Date
-												</Button>
-												<div className="flex gap-2">
-													<Button
-														variant="ghost"
-														size="sm"
-														onClick={() => setIsRescheduleCalendarOpen(false)}
-													>
-														Cancel
-													</Button>
-													<Button
-														variant="default"
-														size="sm"
-														onClick={() => {
-															if (rescheduleDate) {
-																rescheduleSelectedTodos(rescheduleDate)
-																setIsRescheduleCalendarOpen(false)
-															}
-														}}
-														disabled={!rescheduleDate}
-													>
-														Apply
-													</Button>
-												</div>
-											</div>
-										</PopoverContent>
-									</Popover>
-									<Button
-										variant="destructive"
-										size="sm"
-										onClick={deleteSelectedTodos}
-										disabled={isPending}
-									>
-										<Trash className="h-4 w-4 mr-2" />
-										Delete
-									</Button>
-								</div>
-							</>
-						) : (
-							<>
-								{/* Normal Mode Header */}
-								<div className="flex items-center gap-3">
-									<Checkbox
-										id="select-all"
-										checked={allSelected && filteredTodos.length > 0}
-										onCheckedChange={toggleSelectAll}
-										disabled={filteredTodos.length === 0}
-									/>
-									<label htmlFor="select-all" className="text-sm font-medium">
-										Select All
-									</label>
-								</div>
-								<div className="text-sm text-muted-foreground">
-									{filteredTodos.length} item
-									{filteredTodos.length !== 1 ? "s" : ""}
-								</div>
-							</>
-						)}
-					</div>
-
-					{/* Todo Groups */}
-					{filteredTodos.length === 0 &&
-					!searchQuery &&
-					!selectedProjectFilter &&
-					!selectedUserFilter ? (
-						<p className="text-center text-muted-foreground py-4">No todos yet. Add one above!</p>
-					) : filteredTodos.length === 0 ? (
-						<p className="text-center text-muted-foreground py-4">
-							{selectedProjectFilter !== null
-								? "No todos in this project"
-								: selectedUserFilter !== null
-									? "No todos assigned to this user"
-									: "No todos match your search"}
-						</p>
-					) : (
-						<div>
-							{todoGroups.map((group) => (
-								<div key={group.label}>
-									{/* Date Header */}
-									<div
-										className={`px-3 py-2 border-t ${group.isPast ? "bg-red-50 dark:bg-red-950" : "bg-muted/30"}`}
-									>
-										<div className="flex items-center justify-between">
-											<div className="flex items-center gap-2">
-												{group.isPast ? (
-													<AlertCircle className="h-4 w-4 text-red-500" />
-												) : (
-													<Calendar className="h-4 w-4 text-muted-foreground" />
-												)}
-												<h3
-													className={`text-sm font-medium ${group.isPast ? "text-red-600 dark:text-red-400" : ""}`}
-												>
-													{group.label}
-												</h3>
-											</div>
-											<span className="text-xs text-muted-foreground">
-												{group.todos.length} item
-												{group.todos.length !== 1 ? "s" : ""}
-											</span>
-										</div>
-									</div>
-
-									{/* Todos in this group or empty state */}
-									{group.todos.length > 0 ? (
-										<div className="divide-y">
-											{group.todos.map((todo) => (
-												<TodoItem
-													key={todo.id}
-													todo={todo}
-													projects={optimisticProjects}
-													users={users}
-													onDelete={deleteOptimisticTodo}
-													selected={selectedTodoIds.has(todo.id)}
-													onSelectChange={toggleTodoSelection}
-													isPastDue={group.isPast && !todo.completed}
-													onProjectAdded={handleProjectAdded}
-												/>
-											))}
-										</div>
-									) : (
-										<div className="py-3 px-4 text-center text-sm text-muted-foreground italic">
-											{group.label === "Today"
-												? "Nothing due today"
-												: `No items due ${group.label.toLowerCase()}`}
-										</div>
-									)}
-								</div>
-							))}
+					)}
+					{selectedUser && (
+						<div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted">
+							<UserAvatar user={selectedUser} showName />
 						</div>
 					)}
 				</div>
+				<div className="flex items-center gap-2 text-sm text-muted-foreground">
+					<div className="flex -space-x-1">
+						<div className="h-3 w-3 rounded-full bg-green-500" />
+						<div className="h-3 w-3 rounded-full bg-yellow-500" />
+						<div className="h-3 w-3 rounded-full bg-red-500" />
+					</div>
+					<span>Status</span>
+					<span className="px-2 py-1 rounded-full bg-muted">
+						{completedCount}/{totalCount}
+					</span>
+				</div>
+			</div>
+
+			{/* Search, Filter, and Add */}
+			<div className="flex flex-wrap gap-4">
+				<div className="relative flex-1 min-w-[200px]">
+					<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+					<Input
+						type="text"
+						placeholder="Search todos..."
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+						className="pl-9"
+					/>
+				</div>
+
+				<div className="flex gap-2">
+					<ProjectSelector
+						projects={optimisticProjects}
+						selectedProjectId={selectedProjectFilter}
+						onSelectProject={setSelectedProjectFilter}
+						onProjectAdded={handleProjectAdded}
+						triggerClassName="min-w-[150px]"
+					/>
+
+					{selectedProjectFilter !== null && (
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={() => setSelectedProjectFilter(null)}
+							title="Show all projects"
+						>
+							<Layers className="h-4 w-4" />
+							<span className="sr-only">Show all projects</span>
+						</Button>
+					)}
+				</div>
+
+				<div className="flex gap-2">
+					<UserSelector
+						users={users}
+						selectedUserId={selectedUserFilter}
+						onSelectUser={setSelectedUserFilter}
+						triggerClassName="min-w-[150px]"
+					/>
+
+					{selectedUserFilter !== null && (
+						<Button
+							variant="ghost"
+							size="icon"
+							onClick={() => setSelectedUserFilter(null)}
+							title="Show all users"
+						>
+							<Layers className="h-4 w-4" />
+							<span className="sr-only">Show all users</span>
+						</Button>
+					)}
+				</div>
+
+				<Dialog open={isAddTodoOpen} onOpenChange={setIsAddTodoOpen}>
+					<DialogTrigger asChild>
+						<Button>
+							<Plus className="h-4 w-4 mr-2" />
+							Add Todo
+						</Button>
+					</DialogTrigger>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>Add New Todo</DialogTitle>
+						</DialogHeader>
+						<AddTodoForm
+							onAddTodo={addOptimisticTodo}
+							onClose={() => setIsAddTodoOpen(false)}
+							projects={optimisticProjects}
+							users={users}
+							onProjectAdded={handleProjectAdded}
+						/>
+					</DialogContent>
+				</Dialog>
+			</div>
+
+			{/* Todo list */}
+			<div className="border rounded-lg overflow-hidden">
+				{/* Card Header with Bulk Actions */}
+				<div className="flex items-center justify-between p-3 bg-muted/50 border-b">
+					{selectedCount > 0 ? (
+						<>
+							{/* Selection Mode Header */}
+							<div className="flex items-center gap-3">
+								<Checkbox
+									id="select-all"
+									checked={allSelected && filteredTodos.length > 0}
+									onCheckedChange={toggleSelectAll}
+									disabled={filteredTodos.length === 0}
+								/>
+								<label htmlFor="select-all" className="text-sm font-medium flex items-center gap-2">
+									<CheckSquare className="h-4 w-4" />
+									<span>{selectedCount} selected</span>
+								</label>
+							</div>
+							<div className="flex items-center gap-2">
+								<Button
+									variant="outline"
+									size="sm"
+									disabled={isPending}
+									className="flex items-center gap-1"
+									onClick={() => toggleSelectedTodosCompleted(true)}
+								>
+									<CheckCircle className="h-4 w-4 mr-1" />
+									Mark Complete
+								</Button>
+
+								<Button
+									variant="outline"
+									size="sm"
+									disabled={isPending}
+									className="flex items-center gap-1"
+									onClick={() => toggleSelectedTodosCompleted(false)}
+								>
+									<Circle className="h-4 w-4 mr-1" />
+									Mark Incomplete
+								</Button>
+
+								<Popover>
+									<PopoverTrigger asChild>
+										<Button
+											variant="outline"
+											size="sm"
+											disabled={isPending}
+											className="flex items-center gap-1"
+										>
+											<User className="h-4 w-4 mr-1" />
+											Assign To
+										</Button>
+									</PopoverTrigger>
+									<PopoverContent className="w-auto p-0" align="end">
+										<div className="p-2 border-b">
+											<h3 className="text-sm font-medium">
+												Assign {selectedCount} item
+												{selectedCount !== 1 ? "s" : ""} to User
+											</h3>
+										</div>
+										<div className="p-2">
+											<UserSelector
+												users={users}
+												selectedUserId={null}
+												onSelectUser={(userId) => {
+													assignSelectedTodosToUser(userId)
+												}}
+												triggerClassName="w-full justify-start"
+											/>
+										</div>
+									</PopoverContent>
+								</Popover>
+
+								<Popover>
+									<PopoverTrigger asChild>
+										<Button
+											variant="outline"
+											size="sm"
+											disabled={isPending}
+											className="flex items-center gap-1"
+										>
+											<Tag className="h-4 w-4 mr-1" />
+											Move to Project
+										</Button>
+									</PopoverTrigger>
+									<PopoverContent className="w-auto p-0" align="end">
+										<div className="p-2 border-b">
+											<h3 className="text-sm font-medium">
+												Move {selectedCount} item
+												{selectedCount !== 1 ? "s" : ""} to Project
+											</h3>
+										</div>
+										<div className="p-2">
+											<ProjectSelector
+												projects={optimisticProjects}
+												selectedProjectId={null}
+												onSelectProject={(projectId) => {
+													moveSelectedTodosToProject(projectId)
+												}}
+												onProjectAdded={handleProjectAdded}
+												triggerClassName="w-full justify-start"
+											/>
+										</div>
+									</PopoverContent>
+								</Popover>
+
+								<Popover open={isRescheduleCalendarOpen} onOpenChange={setIsRescheduleCalendarOpen}>
+									<PopoverTrigger asChild>
+										<Button
+											variant="outline"
+											size="sm"
+											disabled={isPending}
+											className="flex items-center gap-1"
+										>
+											<Clock className="h-4 w-4 mr-1" />
+											Reschedule
+										</Button>
+									</PopoverTrigger>
+									<PopoverContent className="w-auto p-0" align="end">
+										<div className="p-2 border-b">
+											<h3 className="text-sm font-medium">
+												Reschedule {selectedCount} item
+												{selectedCount !== 1 ? "s" : ""}
+											</h3>
+										</div>
+										<CalendarComponent
+											mode="single"
+											selected={rescheduleDate}
+											onSelect={(date) => {
+												setRescheduleDate(date)
+											}}
+											initialFocus
+										/>
+										<div className="p-2 border-t flex justify-between">
+											<Button
+												variant="ghost"
+												size="sm"
+												onClick={() => {
+													rescheduleSelectedTodos(null)
+													setIsRescheduleCalendarOpen(false)
+												}}
+											>
+												Clear Date
+											</Button>
+											<div className="flex gap-2">
+												<Button
+													variant="ghost"
+													size="sm"
+													onClick={() => setIsRescheduleCalendarOpen(false)}
+												>
+													Cancel
+												</Button>
+												<Button
+													variant="default"
+													size="sm"
+													onClick={() => {
+														if (rescheduleDate) {
+															rescheduleSelectedTodos(rescheduleDate)
+															setIsRescheduleCalendarOpen(false)
+														}
+													}}
+													disabled={!rescheduleDate}
+												>
+													Apply
+												</Button>
+											</div>
+										</div>
+									</PopoverContent>
+								</Popover>
+								<Button
+									variant="destructive"
+									size="sm"
+									onClick={deleteSelectedTodos}
+									disabled={isPending}
+								>
+									<Trash className="h-4 w-4 mr-2" />
+									Delete
+								</Button>
+							</div>
+						</>
+					) : (
+						<>
+							{/* Normal Mode Header */}
+							<div className="flex items-center gap-3">
+								<Checkbox
+									id="select-all"
+									checked={allSelected && filteredTodos.length > 0}
+									onCheckedChange={toggleSelectAll}
+									disabled={filteredTodos.length === 0}
+								/>
+								<label htmlFor="select-all" className="text-sm font-medium">
+									Select All
+								</label>
+							</div>
+							<div className="text-sm text-muted-foreground">
+								{filteredTodos.length} item
+								{filteredTodos.length !== 1 ? "s" : ""}
+							</div>
+						</>
+					)}
+				</div>
+
+				{/* Todo Groups */}
+				{filteredTodos.length === 0 &&
+				!searchQuery &&
+				!selectedProjectFilter &&
+				!selectedUserFilter ? (
+					<p className="text-center text-muted-foreground py-4">No todos yet. Add one above!</p>
+				) : filteredTodos.length === 0 ? (
+					<p className="text-center text-muted-foreground py-4">
+						{selectedProjectFilter !== null
+							? "No todos in this project"
+							: selectedUserFilter !== null
+								? "No todos assigned to this user"
+								: "No todos match your search"}
+					</p>
+				) : (
+					<div>
+						{todoGroups.map((group) => (
+							<div key={group.label}>
+								{/* Date Header */}
+								<div
+									className={`px-3 py-2 border-t ${group.isPast ? "bg-red-50 dark:bg-red-950" : "bg-muted/30"}`}
+								>
+									<div className="flex items-center justify-between">
+										<div className="flex items-center gap-2">
+											{group.isPast ? (
+												<AlertCircle className="h-4 w-4 text-red-500" />
+											) : (
+												<Calendar className="h-4 w-4 text-muted-foreground" />
+											)}
+											<h3
+												className={`text-sm font-medium ${group.isPast ? "text-red-600 dark:text-red-400" : ""}`}
+											>
+												{group.label}
+											</h3>
+										</div>
+										<span className="text-xs text-muted-foreground">
+											{group.todos.length} item
+											{group.todos.length !== 1 ? "s" : ""}
+										</span>
+									</div>
+								</div>
+
+								{/* Todos in this group or empty state */}
+								{group.todos.length > 0 ? (
+									<div className="divide-y">
+										{group.todos.map((todo) => (
+											<TodoItem
+												key={todo.id}
+												todo={todo}
+												projects={optimisticProjects}
+												users={users}
+												onDelete={deleteOptimisticTodo}
+												selected={selectedTodoIds.has(todo.id)}
+												onSelectChange={toggleTodoSelection}
+												isPastDue={group.isPast && !todo.completed}
+												onProjectAdded={handleProjectAdded}
+											/>
+										))}
+									</div>
+								) : (
+									<div className="py-3 px-4 text-center text-sm text-muted-foreground italic">
+										{group.label === "Today"
+											? "Nothing due today"
+											: `No items due ${group.label.toLowerCase()}`}
+									</div>
+								)}
+							</div>
+						))}
+					</div>
+				)}
 			</div>
 		</div>
 	)
