@@ -1,11 +1,26 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { stackServerApp } from './stack'
+import { createRemoteJWKSet, jwtVerify} from 'jose'
+import { z } from 'zod'
+import { checkAccessToken } from './stack'
+
+const TupleSchema = z.tuple([z.string(), z.string()])
+
+async function verifyToken(token: string) {
+  try {
+    const jwks = createRemoteJWKSet(new URL(`https://api.stack-auth.com/api/v1/projects/${process.env.NEXT_PUBLIC_STACK_PROJECT_ID}/.well-known/jwks.json`));
+    const { payload } = await jwtVerify(token, jwks);
+
+    return { success: true, payload, error: null } as const
+  } catch (error) {
+    return { success: false, error, payload: null } as const
+  }
+}
 
 export async function middleware(request: NextRequest) {
   // Skip auth check for public routes
   if (
-    request.nextUrl.pathname.startsWith('/login') ||
+    request.nextUrl.pathname === '/' ||
     request.nextUrl.pathname.startsWith('/handler') ||
     request.nextUrl.pathname.startsWith('/_next') ||
     request.nextUrl.pathname.startsWith('/api')
@@ -13,12 +28,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const user = await stackServerApp.getUser()
-  if (!user) {
-    return NextResponse.redirect(new URL('/login', request.url))
-  }
-
-  return NextResponse.next()
+  const userSub =await checkAccessToken(request)
+  
+  
+	if (!userSub) {
+		return NextResponse.redirect(
+			new URL(
+        // TODO: implement this redirect
+				"/handler/login?redirect=" + encodeURIComponent('blag'),
+				request.url,
+			),
+		)
+	}
 }
 
 // Configure which routes to run middleware on
