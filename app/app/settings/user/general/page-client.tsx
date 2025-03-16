@@ -30,8 +30,7 @@ export function GeneralSettingsPageClient() {
 
 							const form = event.target as HTMLFormElement
 							const displayName = form.displayName?.value
-
-							user.setDisplayName(displayName)
+							user.update({ displayName })
 						}}
 					>
 						<div className="space-y-4">
