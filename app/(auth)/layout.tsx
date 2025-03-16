@@ -1,6 +1,6 @@
 import Link from "next/link"
 import Image from "next/image"
-import { Settings, User, LogOut } from "lucide-react"
+import { Settings, LogOut } from "lucide-react"
 
 import { neon } from "@neondatabase/serverless"
 import { stackServerApp } from "@/stack"
@@ -28,17 +28,17 @@ async function getUserDetails(userId: string | undefined) {
 }
 
 function UserDropdown({ userProfile, signOutUrl }: { userProfile: any; signOutUrl: string }) {
+	if (!userProfile) {
+		return null
+	}
+
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<Button variant="ghost" className="flex items-center gap-2">
-					<span className="inline-flex h-8 items-end flex-col">
-						{userProfile?.name && (
-							<span className="text-[14px] text-gray-600 dark:text-gray-300">
-								{`Hello, ${userProfile?.name.split(" ")[0]}`}
-							</span>
-						)}
-					</span>
+					{userProfile.name && (
+						<span className="text-[14px] text-gray-600 dark:text-gray-300">{userProfile.name}</span>
+					)}
 					{userProfile?.raw_json.profile_image_url && (
 						<Image
 							src={userProfile?.raw_json.profile_image_url}
@@ -50,13 +50,7 @@ function UserDropdown({ userProfile, signOutUrl }: { userProfile: any; signOutUr
 					)}
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end">
-				<DropdownMenuItem asChild>
-					<Link href="/profile" className="flex items-center gap-2">
-						<User className="h-4 w-4" />
-						Profile
-					</Link>
-				</DropdownMenuItem>
+			<DropdownMenuContent align="center">
 				<DropdownMenuItem asChild>
 					<Link href="/settings" className="flex items-center gap-2">
 						<Settings className="h-4 w-4" />
@@ -82,8 +76,8 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
 	return (
 		<div>
 			<header className="w-full flex justify-between items-center px-6 py-4 z-10">
-				<div className="font-medium text-[15px] tracking-tight">
-					<Image src="/neon.svg" alt="Neon logo" width={102} height={28} priority />
+				<div className="font-bold text-lg uppercase tracking-tight">
+					<Link href="/"> Neon Auth NextJS Stripe Template </Link>
 				</div>
 				{user ? (
 					<UserDropdown userProfile={userProfile} signOutUrl={app.signOut} />
