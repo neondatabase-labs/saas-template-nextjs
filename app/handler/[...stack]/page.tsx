@@ -1,6 +1,10 @@
 import { StackHandler } from "@stackframe/stack"
-import { stackServerApp } from "../../../stack"
+import { CustomStackProvider, stackServerApp } from "../../../stack"
 
 export default function Handler(props: unknown) {
-  return <StackHandler fullPage app={stackServerApp} routeProps={props} />
+	return (
+		<CustomStackProvider>
+			<StackHandler fullPage app={stackServerApp} routeProps={props} />
+		</CustomStackProvider>
+	)
 }

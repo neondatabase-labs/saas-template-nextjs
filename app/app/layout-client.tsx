@@ -53,10 +53,9 @@ export function AppLayoutClient({ children }: { children: React.ReactNode }) {
 								</Link>
 							</DropdownMenuItem>
 							<DropdownMenuItem asChild>
-								{/* <Link href={app.signOut} className="flex items-center gap-2">
-									<LogOut className="h-4 w-4" />
+								<Link href="/handler/sign-out" className="flex items-center gap-2">
 									Sign Out
-								</Link> */}
+								</Link>
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>

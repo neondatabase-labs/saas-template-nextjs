@@ -4,14 +4,62 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { AlertTriangle } from "lucide-react"
-import { updateEmail, updatePassword, deleteAccount } from "./actions"
-import { useStackApp } from "@stackframe/stack"
+import { AlertTriangle, Trash } from "lucide-react"
+import {
+	updatePassword,
+	deleteAccount,
+	addContactChannel,
+	deleteContactChannel,
+	makePrimaryContactChannel,
+	sendVerificationEmail,
+} from "./actions"
+import { useOptimistic, useRef, useState } from "react"
 
-export function AccountSettingsPageClient() {
-	const stack = useStackApp()
-	const user = stack.useUser({ or: "redirect" })
-
+export function AccountSettingsPageClient({
+	contactChannels: serverContactChannels,
+}: {
+	contactChannels: Array<{
+		id: string
+		value: string
+		type: string
+		isPrimary: boolean
+		isVerified: boolean
+		usedForAuth: boolean
+	}>
+}) {
+	const formRef = useRef<HTMLFormElement>(null)
+	const [isPendingVerification, setIsPendingVerification] = useState<string[]>([])
+	const [contactChannels, sendChannelEvent] = useOptimistic(
+		serverContactChannels,
+		(
+			current,
+			event:
+				| { type: "addEmail"; email: string }
+				| { type: "removeEmail"; id: string }
+				| { type: "makePrimary"; id: string },
+		) => {
+			switch (event.type) {
+				case "addEmail":
+					return [
+						...current,
+						{
+							id: crypto.randomUUID(),
+							value: event.email,
+							type: "email",
+							isPrimary: false,
+							isVerified: false,
+							usedForAuth: false,
+						},
+					]
+				case "removeEmail":
+					return current.filter((channel) => channel.id !== event.id)
+				case "makePrimary":
+					return current.map((channel) => {
+						return { ...channel, isPrimary: channel.id === event.id }
+					})
+			}
+		},
+	)
 	return (
 		<div className="space-y-8">
 			{/* Email Settings */}
@@ -21,46 +69,92 @@ export function AccountSettingsPageClient() {
 					<CardDescription>Update the email address associated with your account.</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<form action={updateEmail} className="space-y-4">
-						<div className="grid gap-4">
-							<div className="grid gap-2">
-								<Label htmlFor="current-email">Current Email</Label>
-								<Input
-									id="current-email"
-									value={user.primaryEmail || ""}
-									disabled
-									className="bg-muted"
-								/>
-							</div>
+					<div className="space-y-6">
+						{contactChannels.length > 0 && (
+							<div className="space-y-2">
+								{contactChannels.map((channel) => (
+									<div key={channel.id} className="flex items-center gap-2 text-sm">
+										<span>{channel.value}</span>
+										{channel.isVerified && (
+											<span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+												Verified
+											</span>
+										)}
+										{channel.isPrimary && (
+											<span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
+												Primary
+											</span>
+										)}
+										<div className="flex grow justify-end">
+											{!channel.isPrimary ? (
+												<form
+													action={async (formData) => {
+														sendChannelEvent({ type: "removeEmail", id: channel.id })
+														await deleteContactChannel(formData)
+													}}
+												>
+													<input type="hidden" name="id" value={channel.id} />
+													<Button type="submit" variant="outline" size="xs">
+														Remove
+													</Button>
+												</form>
+											) : null}
 
-							<div className="grid gap-2">
-								<Label htmlFor="new-email">New Email</Label>
-								<Input
-									id="new-email"
-									name="newEmail"
-									type="email"
-									placeholder="Enter new email address"
-								/>
+											{channel.isVerified ? (
+												channel.isPrimary ? (
+													<>{/* // no action for primary verified email */}</>
+												) : (
+													<form
+														action={async (formData) => {
+															sendChannelEvent({ type: "makePrimary", id: channel.id })
+															await makePrimaryContactChannel(formData)
+														}}
+													>
+														<input type="hidden" name="id" value={channel.id} />
+														<Button type="submit" variant="outline" size="xs">
+															Make Primary
+														</Button>
+													</form>
+												)
+											) : isPendingVerification.includes(channel.id) ? (
+												<span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+													Verifying...
+												</span>
+											) : (
+												<form
+													action={async (formData) => {
+														// TODO: React wraps this in startTransition which makes it slow
+														setIsPendingVerification([...isPendingVerification, channel.id])
+														await sendVerificationEmail(formData)
+													}}
+												>
+													<input type="hidden" name="id" value={channel.id} />
+													<Button type="submit" variant="outline" size="xs">
+														Send verification email
+													</Button>
+												</form>
+											)}
+										</div>
+									</div>
+								))}
 							</div>
+						)}
 
-							<div className="grid gap-2">
-								<Label htmlFor="password-confirm">Password</Label>
-								<Input
-									id="password-confirm"
-									name="password"
-									type="password"
-									placeholder="Confirm with your password"
-								/>
-								<p className="text-xs text-muted-foreground">
-									For security, please enter your current password to confirm this change.
-								</p>
+						<form
+							ref={formRef}
+							action={async (formData) => {
+								sendChannelEvent({ type: "addEmail", email: formData.get("email") as string })
+								formRef.current?.reset()
+								await addContactChannel(formData)
+							}}
+							className="space-y-4"
+						>
+							<div className="flex gap-2">
+								<Input name="email" type="email" placeholder="Add another email address" />
+								<Button type="submit">Add</Button>
 							</div>
-						</div>
-
-						<div className="flex justify-end">
-							<Button type="submit">Update Email</Button>
-						</div>
-					</form>
+						</form>
+					</div>
 				</CardContent>
 			</Card>
 
@@ -90,20 +184,6 @@ export function AccountSettingsPageClient() {
 									name="newPassword"
 									type="password"
 									placeholder="Enter new password"
-								/>
-								<p className="text-xs text-muted-foreground">
-									Password must be at least 8 characters and include a number and a special
-									character.
-								</p>
-							</div>
-
-							<div className="grid gap-2">
-								<Label htmlFor="confirm-password">Confirm New Password</Label>
-								<Input
-									id="confirm-password"
-									name="confirmPassword"
-									type="password"
-									placeholder="Confirm new password"
 								/>
 							</div>
 						</div>

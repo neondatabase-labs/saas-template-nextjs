@@ -23,7 +23,7 @@ export const stackServerApp = remember(
 			tokenStore: "nextjs-cookie",
 			redirectMethod: "nextjs",
 			urls: {
-				afterSignIn: "/settings/user",
+				afterSignIn: "/app/settings/user",
 			},
 		}),
 )
@@ -45,18 +45,25 @@ async function verifyToken(token: string) {
 	}
 }
 
-/**
- * Check access token in the cookie
- * Use this in middleware
- */
-export async function checkAccessToken(cookies: ReadonlyRequestCookies | RequestCookies) {
+export async function getAccessToken(cookies: ReadonlyRequestCookies | RequestCookies) {
 	const accessToken = cookies.get("stack-access")?.value
 	if (!accessToken) return null
 
 	const tokenTuple = TupleSchema.safeParse(JSON.parse(accessToken))
 	if (!tokenTuple.success) return null
 
-	const { payload, success } = await verifyToken(tokenTuple.data[1])
+	return tokenTuple.data[1]
+}
+
+/**
+ * Check access token in the cookie
+ * Use this in middleware
+ */
+export async function checkAccessToken(cookies: ReadonlyRequestCookies | RequestCookies) {
+	const accessToken = await getAccessToken(cookies)
+	if (!accessToken) return null
+
+	const { payload, success } = await verifyToken(accessToken)
 	if (!success) return null
 
 	return payload.sub
