@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, use, useCallback, ReactNode, startTransition } from "react"
+import { createContext, use, useCallback, ReactNode, startTransition, useEffect } from "react"
 import { useUser as baseUseUser, User } from "@stackframe/stack"
 import { invariant } from "@epic-web/invariant"
 import { z } from "zod"
@@ -48,21 +48,20 @@ export function CustomUserProvider({ children }: { children: ReactNode }) {
 		[baseUser, setOptimisticUser],
 	)
 
-	// useEffect(() => {
-	// 	if (!baseUser) return
-	// 	// This can happen in several ways, and this will fix it when it does
-	// 	// 1. Someone manually changes display name in the StackAuth dashboard
-	// 	// 2. Someone maliciously sends a request to update their own display name
-	// 	// 3. Onboarding failed and no display name was set
-	// 	if (baseUser.displayName && !DisplayNameSchema.safeParse(baseUser.displayName).success) {
-	// 		setDisplayName(baseUser.displayName)
-	// 	}
-	// }, [baseUser, setDisplayName])
+	useEffect(() => {
+		if (!baseUser) return
+		// This can happen in several ways, and this will fix it when it does
+		// 1. Someone manually changes display name in the StackAuth dashboard
+		// 2. Someone maliciously sends a request to update their own display name
+		// 3. Onboarding failed and no display name was set
+		if (baseUser.displayName && !DisplayNameSchema.safeParse(baseUser.displayName).success) {
+			setDisplayName(baseUser.displayName)
+		}
+	}, [baseUser, setDisplayName])
 
 	const customUser = optimisticUser
 		? {
 				...optimisticUser,
-				displayName: optimisticUser.displayName ?? optimisticUser.primaryEmail,
 				setDisplayName,
 			}
 		: null
