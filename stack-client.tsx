@@ -1,9 +1,10 @@
 "use client"
 
-import { createContext, use, useState, useCallback, ReactNode, useEffect } from "react"
+import { createContext, use, useCallback, ReactNode, startTransition } from "react"
 import { useUser as baseUseUser, User } from "@stackframe/stack"
 import { invariant } from "@epic-web/invariant"
 import { z } from "zod"
+import { useOptimistic } from "react"
 
 const DISPLAY_NAME_MAX_LENGTH = 60
 const DisplayNameSchema = z.string().max(DISPLAY_NAME_MAX_LENGTH)
@@ -24,42 +25,44 @@ const CustomUserContext = createContext<
 // and then updates the StackAuth profile in the background
 export function CustomUserProvider({ children }: { children: ReactNode }) {
 	const baseUser = baseUseUser()
+	const [optimisticUser, setOptimisticUser] = useOptimistic(
+		baseUser,
+		(state, { displayName }: { displayName: string }) => {
+			if (!state) return state
 
-	// TODO: maybe just useOptimistic here?
-	const [prevDisplayName, setPrevDisplayName] = useState(baseUser?.displayName)
-	const [localDisplayName, setLocalDisplayName] = useState(baseUser?.displayName)
-	if (prevDisplayName !== baseUser?.displayName) {
-		setPrevDisplayName(baseUser?.displayName)
-		setLocalDisplayName(baseUser?.displayName)
-	}
+			return {
+				...state,
+				displayName: displayName,
+			}
+		},
+	)
 
-	// TODO: either add React Compiler and remove useCallback
-	// or memoize the rest
 	const setDisplayName = useCallback(
 		(inputName: string) => {
 			const name = coerceDisplayName(inputName.trim() || baseUser?.primaryEmail || "(unknown)")
-
-			setLocalDisplayName(name)
-			void baseUser?.setDisplayName(name)
+			startTransition(async () => {
+				setOptimisticUser({ displayName: name })
+				await baseUser?.setDisplayName(name)
+			})
 		},
-		[baseUser],
+		[baseUser, setOptimisticUser],
 	)
 
-	useEffect(() => {
-		if (!baseUser) return
-		// This can happen in several ways, and this will fix it when it does
-		// 1. Someone manually changes display name in the StackAuth dashboard
-		// 2. Someone maliciously sends a request to update their own display name
-		// 3. Onboarding failed and no display name was set
-		if (prevDisplayName && !DisplayNameSchema.safeParse(prevDisplayName).success) {
-			setDisplayName(prevDisplayName)
-		}
-	}, [baseUser, prevDisplayName, setDisplayName])
+	// useEffect(() => {
+	// 	if (!baseUser) return
+	// 	// This can happen in several ways, and this will fix it when it does
+	// 	// 1. Someone manually changes display name in the StackAuth dashboard
+	// 	// 2. Someone maliciously sends a request to update their own display name
+	// 	// 3. Onboarding failed and no display name was set
+	// 	if (baseUser.displayName && !DisplayNameSchema.safeParse(baseUser.displayName).success) {
+	// 		setDisplayName(baseUser.displayName)
+	// 	}
+	// }, [baseUser, setDisplayName])
 
-	const customUser = baseUser
+	const customUser = optimisticUser
 		? {
-				...baseUser,
-				displayName: localDisplayName ?? baseUser.primaryEmail,
+				...optimisticUser,
+				displayName: optimisticUser.displayName ?? optimisticUser.primaryEmail,
 				setDisplayName,
 			}
 		: null
