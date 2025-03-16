@@ -28,9 +28,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const userSub =await checkAccessToken(request)
-  
-  
+  const userSub = await checkAccessToken(request.cookies)
+
+
 	if (!userSub) {
 		return NextResponse.redirect(
 			new URL(

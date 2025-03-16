@@ -1,11 +1,14 @@
-import { stackServerApp } from "@/stack"
+"use client"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Users } from "lucide-react"
+import { useStackApp } from "@stackframe/stack"
 
-export default async function GeneralSettingsPage() {
-	const user = await stackServerApp.getUser({ or: "redirect" })
+export default function GeneralSettingsPage() {
+	const stack = useStackApp()
+	const user = stack.useUser({ or: "redirect" })
 
 	return (
 		<div className="space-y-8">
