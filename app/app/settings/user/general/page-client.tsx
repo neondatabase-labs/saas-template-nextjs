@@ -4,11 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Users } from "lucide-react"
-import { useStackApp } from "@stackframe/stack"
+import { useUser } from "@/stack-client"
 
 export function GeneralSettingsPageClient() {
-	const stack = useStackApp()
-	const user = stack.useUser({ or: "redirect" })
+	const user = useUser()
 
 	return (
 		<div className="space-y-8">
@@ -24,37 +23,28 @@ export function GeneralSettingsPageClient() {
 					</div>
 				</CardHeader>
 				<CardContent>
-					<form className="space-y-4">
+					<form
+						className="space-y-4"
+						onSubmit={(event) => {
+							event.preventDefault()
+
+							const form = event.target as HTMLFormElement
+							const displayName = form.displayName?.value
+
+							user.setDisplayName(displayName)
+						}}
+					>
 						<div className="space-y-4">
 							<div>
-								<label htmlFor="name" className="text-sm font-medium">
+								<label htmlFor="displayName" className="text-sm font-medium">
 									Display Name
 								</label>
 								<Input
-									id="name"
-									name="name"
+									id="displayName"
+									name="displayName"
 									defaultValue={user.displayName || ""}
 									placeholder="Enter your name"
-									required
 								/>
-							</div>
-
-							<div>
-								<label htmlFor="email" className="text-sm font-medium">
-									Email
-								</label>
-								<Input
-									id="email"
-									name="email"
-									type="email"
-									defaultValue={user.primaryEmail || ""}
-									placeholder="Enter your email"
-									required
-									disabled
-								/>
-								<p className="mt-1 text-sm text-muted-foreground">
-									Your email is used for important notifications and can't be changed here.
-								</p>
 							</div>
 						</div>
 
