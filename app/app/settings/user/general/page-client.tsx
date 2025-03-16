@@ -5,9 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Users } from "lucide-react"
 import { useUser } from "@/stack-client"
+import { useState } from "react"
+import { ImageInput } from "@/components/image-input"
+import Image from "next/image"
 
 export function GeneralSettingsPageClient() {
 	const user = useUser()
+	const [avatarError, setAvatarError] = useState("")
 
 	return (
 		<div className="space-y-8">
@@ -67,20 +71,35 @@ export function GeneralSettingsPageClient() {
 					<div className="flex items-center gap-4">
 						<div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center overflow-hidden">
 							{user.profileImageUrl ? (
-								<img
+								<Image
 									src={user.profileImageUrl}
 									alt={user.displayName || "User avatar"}
 									className="h-full w-full object-cover"
+									width={128}
+									height={128}
 								/>
 							) : (
 								<Users className="h-8 w-8 text-muted-foreground" />
 							)}
 						</div>
-						<Button variant="outline">Upload Avatar</Button>
+						<Button variant="outline" asChild>
+							<label className="cursor-pointer">
+								Upload Avatar
+								<ImageInput
+									className="hidden"
+									maxBytes={100_000}
+									onChange={(dataUrl) => {
+										setAvatarError("")
+										user.update({ profileImageUrl: dataUrl })
+									}}
+									onError={(error) => setAvatarError(error)}
+								/>
+							</label>
+						</Button>
 					</div>
-					<p className="mt-2 text-sm text-muted-foreground">
-						Click on the avatar to upload a custom one from your files.
-					</p>
+					<div className="mt-2">
+						<p className="text-sm text-destructive min-h-[1rem]">{avatarError}</p>
+					</div>
 				</CardContent>
 			</Card>
 		</div>
