@@ -5,10 +5,10 @@ const settingsNavItems = [
 	{
 		title: "User",
 		items: [
-			{ href: "/settings/user/general", label: "General" },
-			{ href: "/settings/user/notifications", label: "Notifications" },
-			{ href: "/settings/user/billing", label: "Billing" },
-			{ href: "/settings/user/account", label: "Account" },
+			{ href: "/app/settings/user/general", label: "General" },
+			{ href: "/app/settings/user/notifications", label: "Notifications" },
+			{ href: "/app/settings/user/billing", label: "Billing" },
+			{ href: "/app/settings/user/account", label: "Account" },
 		],
 	},
 ]

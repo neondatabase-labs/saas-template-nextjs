@@ -52,7 +52,7 @@ function UserDropdown({ userProfile, signOutUrl }: { userProfile: any; signOutUr
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="center">
 				<DropdownMenuItem asChild>
-					<Link href="/settings" className="flex items-center gap-2">
+					<Link href="/app/settings" className="flex items-center gap-2">
 						<Settings className="h-4 w-4" />
 						Settings
 					</Link>
@@ -77,7 +77,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
 		<div>
 			<header className="w-full flex justify-between items-center px-6 py-4 z-10">
 				<div className="font-bold text-lg uppercase tracking-tight">
-					<Link href="/"> Neon Auth NextJS Stripe Template </Link>
+					<Link href="/app"> Neon Auth NextJS Stripe Template </Link>
 				</div>
 				{user ? (
 					<UserDropdown userProfile={userProfile} signOutUrl={app.signOut} />

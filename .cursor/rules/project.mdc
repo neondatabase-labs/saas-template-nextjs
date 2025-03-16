@@ -1,0 +1,79 @@
+---
+description: Use these guidelines when organizing files, creating files, abstracting components, functions, etc
+globs: *.tsx
+alwaysApply: false
+---
+# Next.js Routes
+
+Every route should use this folder structure
+```yml
+route-name/
+  layout.tsx
+  page.tsx 
+  page-client.tsx
+```
+
+## layout.tsx
+
+This file is optional
+
+## page-client.tsx
+
+This file is optional, but will always exist if the user is meant to land on this page. This is a big component that represents the whole page. 
+
+## page.tsx 
+
+This file is mandatory.  This is always an `export default async function`. There are three main forms this will take
+
+### page.tsx act as loader for client component 
+
+If the `page-client.tsx` needs server-data, fetch it here and pass it as props. 
+
+```ts
+import { TodosPageClient } from "./page-client"
+import { getTodos, getProjects, getUsers } from "@/lib/actions"
+
+export default async function TodosPage() {
+	// Fetch todos, projects, and users for the initial form state
+	const whenTodos = getTodos()
+	const whenProjects = getProjects()
+	const whenUsers = getUsers()
+
+	return (
+		<div className="container max-w-6xl mx-auto py-8 px-4">
+			<TodosPage
+        todos={await whenTodos}
+        projects={await whenProjects}
+        users={await whenUsers}
+      />
+		</div>
+	)
+}
+```
+
+
+### page.tsx return client component
+
+If there is no server-side data required here, simply return the `page-client.tsx`
+
+```ts
+import { AccountSettingsPageClient } from "./page-client"
+
+export default async function AccountSettingsPage() {
+	return <AccountSettingsPageClient />
+}
+```
+
+
+### page.tsx redirect to child
+
+If there is no `page-client.tsx`
+
+```ts
+export default function AppPage() {
+	// default to todos if user comes to /app
+	redirect("/app/todos")
+}
+```
+
+

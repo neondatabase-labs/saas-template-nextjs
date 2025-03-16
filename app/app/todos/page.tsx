@@ -1,4 +1,4 @@
-import { TodoPage } from "./todo-page"
+import { TodoPage } from "./page-client"
 import { getTodos, getProjects, getUsers } from "@/lib/actions"
 
 export default async function TodosPage() {
