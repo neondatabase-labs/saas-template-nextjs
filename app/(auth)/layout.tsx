@@ -11,6 +11,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
+import { StackProvider, StackTheme } from "@stackframe/stack"
 
 async function getUserDetails(userId: string | undefined) {
 	if (!process.env.DATABASE_URL) {
@@ -104,7 +105,9 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
 				)}
 			</header>
 
-			{children}
+			<StackProvider app={stackServerApp}>
+				<StackTheme>{children}</StackTheme>
+			</StackProvider>
 		</div>
 	)
 }

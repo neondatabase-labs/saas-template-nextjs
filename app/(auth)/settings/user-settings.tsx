@@ -151,7 +151,7 @@ export function UserSettings({ user }: { user: any }) {
 				<CardContent>
 					<p className="text-sm text-muted-foreground">
 						Notification settings coming soon. You'll be able to customize email notifications for
-						tasks, mentions, and team updates.
+						tasks and mentions.
 					</p>
 				</CardContent>
 			</Card>

@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache"
 import { db } from "./db"
 import { todos, projects, users, type NewTodo, type NewProject } from "./schema"
 import { eq, inArray, desc } from "drizzle-orm"
-import { stackServerApp } from "@/stack"
 
 export async function getTodos() {
   try {
@@ -236,54 +235,5 @@ export async function bulkToggleCompleted(ids: number[], completed: boolean) {
   } catch (error) {
     console.error("Failed to bulk update completion status:", error)
     return { error: `Failed to mark todos as ${completed ? "completed" : "incomplete"}` }
-  }
-}
-
-export async function createTeam(formData: FormData) {
-  const name = formData.get("name") as string
-
-  if (!name?.trim()) {
-    return { error: "Team name is required" }
-  }
-
-  try {
-    const user = await stackServerApp.getUser()
-    if (!user) {
-      return { error: "Not authenticated" }
-    }
-
-    const team = await user.createTeam({ name })
-    revalidatePath("/settings")
-    return { success: true, team }
-  } catch (error) {
-    console.error("Failed to create team:", error)
-    return { error: "Failed to create team" }
-  }
-}
-
-export async function leaveTeam(formData: FormData) {
-  const teamId = formData.get("teamId") as string
-
-  if (!teamId) {
-    return { error: "Team ID is required" }
-  }
-
-  try {
-    const user = await stackServerApp.getUser()
-    if (!user) {
-      return { error: "Not authenticated" }
-    }
-
-    const team = await user.getTeam(teamId)
-    if (!team) {
-      return { error: "Team not found" }
-    }
-
-    await user.leaveTeam(team)
-    revalidatePath("/settings")
-    return { success: true }
-  } catch (error) {
-    console.error("Failed to leave team:", error)
-    return { error: "Failed to leave team" }
   }
 }

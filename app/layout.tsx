@@ -1,7 +1,4 @@
 import type React from "react"
-import { StackProvider } from "@stackframe/stack"
-import { StackTheme } from "@stackframe/stack"
-import { stackServerApp } from "../stack"
 
 import "./globals.css"
 
@@ -13,11 +10,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 				name="description"
 				content="A simple todo app built with Next.js, Drizzle ORM, and Neon Serverless"
 			/>
-			<body className="min-h-screen bg-background">
-				<StackProvider app={stackServerApp}>
-					<StackTheme>{children}</StackTheme>
-				</StackProvider>
-			</body>
+			<body className="min-h-screen bg-background">{children}</body>
 		</html>
 	)
 }

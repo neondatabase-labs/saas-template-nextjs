@@ -1,7 +1,5 @@
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
-import { stackServerApp } from "@/stack"
-import { redirect } from "next/navigation"
 
 const settingsNavItems = [
 	{
@@ -9,27 +7,13 @@ const settingsNavItems = [
 		items: [
 			{ href: "/settings/user/general", label: "General" },
 			{ href: "/settings/user/notifications", label: "Notifications" },
-		],
-	},
-	{
-		title: "Team",
-		items: [
-			{ href: "/settings/team/general", label: "Team Settings" },
-			{ href: "/settings/team/members", label: "Members" },
-			{ href: "/settings/team/billing", label: "Billing" },
-			{ href: "/settings/team/invoices", label: "Invoices" },
+			{ href: "/settings/user/billing", label: "Billing" },
+			{ href: "/settings/user/account", label: "Account" },
 		],
 	},
 ]
 
 export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
-	const user = await stackServerApp.getUser({ or: "redirect" })
-
-	if (!user.selectedTeam) {
-		await user.delete()
-		redirect("/handler/sign-in")
-	}
-
 	return (
 		<div className="mx-auto max-w-7xl px-4 py-8">
 			<h1 className="text-3xl font-semibold mb-8">Settings</h1>
