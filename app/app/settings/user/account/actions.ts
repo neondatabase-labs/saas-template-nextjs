@@ -37,37 +37,39 @@ export async function updateEmail(formData: FormData) {
 
 export async function updatePassword(formData: FormData) {
   const currentPassword = formData.get("currentPassword") as string
-  const newPassword = formData.get("newPassword") as string
-  const confirmPassword = formData.get("confirmPassword") as string
-
-  if (!currentPassword?.trim()) {
-    return { error: "Current password is required" }
+  const user = await stackServerApp.getUser()
+  if (!user) {
+    return { success: false as const, error: "Not authenticated" }
   }
+  
+  // If the user has a password, require the current password
+  if (user.hasPassword && !currentPassword?.trim()) {
+    return { success: false as const, error: "Current password is required" }
+  }
+
+  const newPassword = formData.get("newPassword") as string
 
   if (!newPassword?.trim()) {
-    return { error: "New password is required" }
+    return { success: false as const, error: "New password is required" }
   }
-
-  if (newPassword !== confirmPassword) {
-    return { error: "New passwords do not match" }
-  }
-
-  try {
-    const user = await stackServerApp.getUser()
-    if (!user) {
-      return { error: "Not authenticated" }
+  
+  if (user.hasPassword) {
+    // TODO: this appears to be broken, it works even with incorrect oldPassword
+    const error = await user.updatePassword({ oldPassword: currentPassword, newPassword })
+    if (error) {
+      console.error("Failed to update password:", error)
+      return { success: false as const, error: error.message }
     }
-
-    // In a real implementation, you would update the password
-    // This is a placeholder for the actual implementation
-    // await user.updatePassword({ currentPassword, newPassword })
-
-    revalidatePath("/settings/user/account")
-    return { success: true, message: "Password updated successfully" }
-  } catch (error) {
-    console.error("Failed to update password:", error)
-    return { error: "Failed to update password" }
+  } else {
+    const error = await user.setPassword({ password: newPassword })
+    if (error) {
+      console.error("Failed to set password:", error)
+      return { success: false as const, error: error.message }
+    }
   }
+
+  revalidatePath("/settings/user/account")
+  return { success: true as const, message: "Password updated successfully" }
 }
 
 export async function deleteAccount(formData: FormData) {
@@ -167,7 +169,8 @@ export async function makePrimaryContactChannel(formData: FormData) {
   // if the user deletes it, StackAuth still lets them log in, so no need to guard against that.
   const response = await fetch(`https://api.stack-auth.com/api/v1/contact-channels/me/${id}`, {
     method: "PATCH",
-    body: JSON.stringify({ is_primary: true }),
+    // we'll treat all primary contact channels as used for auth
+    body: JSON.stringify({ is_primary: true, used_for_auth: true }),
     headers: {
       "Content-Type": "application/json",
       "X-Stack-Access-Type": "server",

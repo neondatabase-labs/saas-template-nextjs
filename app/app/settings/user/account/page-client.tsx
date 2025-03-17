@@ -4,7 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { AlertTriangle, Trash } from "lucide-react"
+import { AlertTriangle } from "lucide-react"
+import { useOptimistic, useRef, useState } from "react"
+import { useUser } from "@/stack-client"
+import { useFormState } from "react-dom"
 import {
 	updatePassword,
 	deleteAccount,
@@ -13,7 +16,6 @@ import {
 	makePrimaryContactChannel,
 	sendVerificationEmail,
 } from "./actions"
-import { useOptimistic, useRef, useState } from "react"
 
 export function AccountSettingsPageClient({
 	contactChannels: serverContactChannels,
@@ -27,6 +29,7 @@ export function AccountSettingsPageClient({
 		usedForAuth: boolean
 	}>
 }) {
+	const user = useUser()
 	const formRef = useRef<HTMLFormElement>(null)
 	const [isPendingVerification, setIsPendingVerification] = useState<string[]>([])
 	const [contactChannels, sendChannelEvent] = useOptimistic(
@@ -60,6 +63,9 @@ export function AccountSettingsPageClient({
 			}
 		},
 	)
+
+	const [passwordError, setPasswordError] = useState<string | null>(null)
+
 	return (
 		<div className="space-y-8">
 			{/* Email Settings */}
@@ -102,7 +108,22 @@ export function AccountSettingsPageClient({
 
 											{channel.isVerified ? (
 												channel.isPrimary ? (
-													<>{/* // no action for primary verified email */}</>
+													!channel.usedForAuth && user.hasPassword ? (
+														// generally we won't see this, because we set primary at the same time as usedForAuth
+														<form
+															action={async (formData) => {
+																sendChannelEvent({ type: "makePrimary", id: channel.id })
+																await makePrimaryContactChannel(formData)
+															}}
+														>
+															<input type="hidden" name="id" value={channel.id} />
+															<Button type="submit" variant="outline" size="xs">
+																Use for Auth
+															</Button>
+														</form>
+													) : (
+														<>{/* // no action for primary verified email */}</>
+													)
 												) : (
 													<form
 														action={async (formData) => {
@@ -161,21 +182,34 @@ export function AccountSettingsPageClient({
 			{/* Password Settings */}
 			<Card>
 				<CardHeader>
-					<CardTitle>Change Password</CardTitle>
-					<CardDescription>Update your account password.</CardDescription>
+					<CardTitle>{user.hasPassword ? "Change Password" : "Set Up Password"}</CardTitle>
+					<CardDescription>
+						{user.hasPassword
+							? "Update your account password."
+							: "Add a password to enable password-based login as an alternative to your current sign-in method."}
+					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<form action={updatePassword} className="space-y-4">
+					<form
+						action={async (formData) => {
+							const result = await updatePassword(formData)
+							setPasswordError(result.success ? null : result.error)
+						}}
+						className="space-y-4"
+					>
 						<div className="grid gap-4">
-							<div className="grid gap-2">
-								<Label htmlFor="current-password">Current Password</Label>
-								<Input
-									id="current-password"
-									name="currentPassword"
-									type="password"
-									placeholder="Enter current password"
-								/>
-							</div>
+							{user.hasPassword ? (
+								<div className="grid gap-2">
+									<Label htmlFor="current-password">Current Password</Label>
+									<Input
+										id="current-password"
+										name="currentPassword"
+										type="password"
+										placeholder="Enter current password"
+										onBlur={() => setPasswordError(null)}
+									/>
+								</div>
+							) : null}
 
 							<div className="grid gap-2">
 								<Label htmlFor="new-password">New Password</Label>
@@ -184,12 +218,20 @@ export function AccountSettingsPageClient({
 									name="newPassword"
 									type="password"
 									placeholder="Enter new password"
+									onBlur={() => setPasswordError(null)}
 								/>
 							</div>
 						</div>
 
-						<div className="flex justify-end">
-							<Button type="submit">Update Password</Button>
+						<div className="flex flex-col gap-4">
+							<div id="password-error" aria-live="polite" className="text-sm text-red-500">
+								{passwordError}
+							</div>
+							<div className="flex justify-end">
+								<Button type="submit">
+									{user.hasPassword ? "Update Password" : "Set Password"}
+								</Button>
+							</div>
 						</div>
 					</form>
 				</CardContent>
@@ -273,4 +315,22 @@ export function AccountSettingsPageClient({
 			</Card>
 		</div>
 	)
+}
+
+function FormState() {
+	const [state] = useFormState(
+		async (prevState: any, formData: FormData) => {
+			const result = await updatePassword(formData)
+			if (result.error) {
+				return { message: result.error }
+			}
+			if (result.success) {
+				return { message: "" }
+			}
+		},
+		{ message: "" },
+	)
+
+	if (!state?.message) return null
+	return <span>{state.message}</span>
 }
