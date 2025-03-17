@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label"
 import { AlertTriangle } from "lucide-react"
 import { useOptimistic, useRef, useState } from "react"
 import { useUser } from "@/stack-client"
-import { useFormState } from "react-dom"
 import {
 	updatePassword,
 	deleteAccount,
@@ -29,7 +28,7 @@ export function AccountSettingsPageClient({
 		usedForAuth: boolean
 	}>
 }) {
-	const user = useUser()
+	const user = useUser({ or: "redirect" })
 	const formRef = useRef<HTMLFormElement>(null)
 	const [isPendingVerification, setIsPendingVerification] = useState<string[]>([])
 	const [contactChannels, sendChannelEvent] = useOptimistic(
@@ -65,6 +64,7 @@ export function AccountSettingsPageClient({
 	)
 
 	const [passwordError, setPasswordError] = useState<string | null>(null)
+	const [deleteError, setDeleteError] = useState<string | null>(null)
 
 	return (
 		<div className="space-y-8">
@@ -237,52 +237,6 @@ export function AccountSettingsPageClient({
 				</CardContent>
 			</Card>
 
-			{/* Account Security */}
-			<Card>
-				<CardHeader>
-					<CardTitle>Two-Factor Authentication</CardTitle>
-					<CardDescription>Add an extra layer of security to your account.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div className="flex items-center justify-between">
-						<div>
-							<h3 className="font-medium">Two-Factor Authentication</h3>
-							<p className="text-sm text-muted-foreground">
-								Protect your account with an additional verification step.
-							</p>
-						</div>
-						<Button variant="outline">Enable 2FA</Button>
-					</div>
-				</CardContent>
-			</Card>
-
-			{/* Account Sessions */}
-			<Card>
-				<CardHeader>
-					<CardTitle>Active Sessions</CardTitle>
-					<CardDescription>Manage your active login sessions.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div className="space-y-4">
-						<div className="flex items-center justify-between">
-							<div>
-								<h3 className="font-medium">Current Device</h3>
-								<p className="text-sm text-muted-foreground">
-									{new Date().toLocaleDateString()} · Current Browser
-								</p>
-							</div>
-							<span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-								Current
-							</span>
-						</div>
-						<div className="flex justify-end">
-							<Button variant="outline">Sign Out All Other Devices</Button>
-						</div>
-					</div>
-				</CardContent>
-			</Card>
-
-			{/* Danger Zone */}
 			<Card className="border-red-200">
 				<CardHeader>
 					<div className="flex items-center gap-2">
@@ -294,7 +248,15 @@ export function AccountSettingsPageClient({
 					</CardDescription>
 				</CardHeader>
 				<CardContent>
-					<form action={deleteAccount} className="space-y-4">
+					<form
+						action={async (formData) => {
+							const result = await deleteAccount(formData)
+							if (result?.error) {
+								setDeleteError(result.error)
+							}
+						}}
+						className="space-y-4"
+					>
 						<p className="text-sm">
 							Once you delete your account, there is no going back. This action cannot be undone.
 							All your data will be permanently deleted.
@@ -302,7 +264,13 @@ export function AccountSettingsPageClient({
 
 						<div className="grid gap-2">
 							<Label htmlFor="confirm-delete">Type DELETE to confirm</Label>
-							<Input id="confirm-delete" name="confirmDelete" placeholder="DELETE" />
+							<Input
+								id="confirm-delete"
+								name="confirmDelete"
+								placeholder="DELETE"
+								onFocus={() => setDeleteError(null)}
+							/>
+							{deleteError && <p className="text-sm text-red-500">{deleteError}</p>}
 						</div>
 
 						<div className="flex justify-end">
@@ -315,22 +283,4 @@ export function AccountSettingsPageClient({
 			</Card>
 		</div>
 	)
-}
-
-function FormState() {
-	const [state] = useFormState(
-		async (prevState: any, formData: FormData) => {
-			const result = await updatePassword(formData)
-			if (result.error) {
-				return { message: result.error }
-			}
-			if (result.success) {
-				return { message: "" }
-			}
-		},
-		{ message: "" },
-	)
-
-	if (!state?.message) return null
-	return <span>{state.message}</span>
 }

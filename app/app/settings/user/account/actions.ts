@@ -4,6 +4,7 @@ import { getAccessToken, stackServerApp } from "@/stack"
 import { revalidatePath } from "next/cache"
 import { revalidateAccountSettings } from "./page"
 import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
 
 export async function updateEmail(formData: FormData) {
   const newEmail = formData.get("newEmail") as string
@@ -79,21 +80,13 @@ export async function deleteAccount(formData: FormData) {
     return { error: "Please type DELETE to confirm account deletion" }
   }
 
-  try {
-    const user = await stackServerApp.getUser()
-    if (!user) {
-      return { error: "Not authenticated" }
-    }
-
-    // In a real implementation, you would delete the user account
-    // This is a placeholder for the actual implementation
-    // await user.delete()
-
-    return { success: true, message: "Account deleted successfully" }
-  } catch (error) {
-    console.error("Failed to delete account:", error)
-    return { error: "Failed to delete account" }
+  const user = await stackServerApp.getUser()
+  if (!user) {
+    return { error: "Not authenticated" }
   }
+
+  await user.delete()
+  redirect("/handler/sign-out")
 }
 
 export async function addContactChannel(formData: FormData) {
