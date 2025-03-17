@@ -2,9 +2,9 @@
 
 import { createContext, use, useCallback, ReactNode, startTransition, useEffect } from "react"
 import { useUser as baseUseUser, CurrentUser, User } from "@stackframe/stack"
-import { invariant } from "@epic-web/invariant"
 import { z } from "zod"
 import { useOptimistic } from "react"
+import { redirect } from "next/navigation"
 
 const DISPLAY_NAME_MAX_LENGTH = 60
 const DisplayNameSchema = z.string().max(DISPLAY_NAME_MAX_LENGTH)
@@ -17,8 +17,8 @@ const CustomUserContext = createContext<
 	| (Omit<User, "update" | "setDisplayName"> & {
 			update: (updates: Partial<UserUpdateOptions>) => void
 	  })
-	| null
-	| undefined
+	| null // user is not logged in
+	| undefined // useUser is not within CustomUserProvider
 >(undefined)
 
 // StackAuth does not optimistically update anything when we modify the profile
@@ -73,9 +73,24 @@ export function CustomUserProvider({ children }: { children: ReactNode }) {
 	return <CustomUserContext.Provider value={customUser}>{children}</CustomUserContext.Provider>
 }
 
-export function useUser() {
+export function useUser(options?: { or: "redirect" | "throw" }) {
 	const customUser = use(CustomUserContext)
-	invariant(customUser, "useUser must be used within a CustomStackProvider")
+
+	if (!customUser) {
+		if (customUser === undefined) {
+			throw new Error("useUser must be used within a CustomUserProvider")
+		}
+
+		if (options?.or === "throw") {
+			throw new Error("User is not logged in")
+		}
+
+		if (options?.or === "redirect") {
+			redirect("/handler/sign-in")
+		}
+
+		throw new Error("Unhandled option")
+	}
 
 	return customUser
 }
