@@ -16,6 +16,14 @@ type UserUpdateOptions = Parameters<CurrentUser["update"]>[0]
 const CustomUserContext = createContext<
 	| (Omit<User, "update" | "setDisplayName"> & {
 			update: (updates: Partial<UserUpdateOptions>) => void
+			contactChannels: Array<{
+				id: string
+				value: string
+				type: "email"
+				isPrimary: boolean
+				isVerified: boolean
+				usedForAuth: boolean
+			}>
 	  })
 	| null // user is not logged in
 	| undefined // useUser is not within CustomUserProvider
@@ -27,6 +35,12 @@ const CustomUserContext = createContext<
 export function CustomUserProvider({ children }: { children: ReactNode }) {
 	const baseUser = baseUseUser()
 
+	// we don't need to useOptimistic for contact channels here because they're only used in settings
+	// so we can useOptimistic where we actually work with them
+	const contactChannels = baseUser?.useContactChannels()
+
+	// We do useOptimistic here because we want to update the nav layout instantly
+	// even when the user is modified in a specific component
 	const [optimisticUser, setOptimisticUser] = useOptimistic(
 		baseUser,
 		(state, updates: Partial<UserUpdateOptions>) => {
@@ -67,6 +81,7 @@ export function CustomUserProvider({ children }: { children: ReactNode }) {
 				...optimisticUser,
 				setDisplayName: undefined, // stop consumers from using this
 				update,
+				contactChannels: contactChannels ?? [],
 			}
 		: null
 
@@ -76,21 +91,21 @@ export function CustomUserProvider({ children }: { children: ReactNode }) {
 export function useUser(options?: { or: "redirect" | "throw" }) {
 	const customUser = use(CustomUserContext)
 
-	if (!customUser) {
-		if (customUser === undefined) {
-			throw new Error("useUser must be used within a CustomUserProvider")
-		}
-
-		if (options?.or === "throw") {
-			throw new Error("User is not logged in")
-		}
-
-		if (options?.or === "redirect") {
-			redirect("/handler/sign-in")
-		}
-
-		throw new Error("Unhandled option")
+	if (customUser) {
+		return customUser
 	}
 
-	return customUser
+	if (customUser === undefined) {
+		throw new Error("useUser must be used within a CustomUserProvider")
+	}
+
+	if (options?.or === "throw") {
+		throw new Error("User is not logged in")
+	}
+
+	if (options?.or === "redirect") {
+		redirect("/handler/sign-in")
+	}
+
+	throw new Error("Unhandled option")
 }

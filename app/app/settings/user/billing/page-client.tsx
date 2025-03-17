@@ -4,11 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useStackApp } from "@stackframe/stack"
+import { useUser } from "@/stack-client"
 
 export function BillingSettingsPageClient() {
-	const stack = useStackApp()
-	const user = stack.useUser({ or: "redirect" })
+	const user = useUser({ or: "redirect" })
 
 	return (
 		<div className="space-y-8">
