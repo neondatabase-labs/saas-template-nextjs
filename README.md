@@ -40,3 +40,12 @@ Replacing `stack.useUser()` wiht the custom `useUser()` implements this expectat
 This also provides an entrypoint to add client side validation to the setDisplayName function, which StackAuth leaves unprotected for users to set up to 100kB of text.
 
 This is not real security as the server endpoint for this remains accessible to the user, so we must trim the displayName at all times before displaying.
+
+## Stripe
+
+```bash
+stripe listen --events checkout.session.completed,customer.subscription.created,customer.subscription.updated,customer.subscription.deleted,customer.subscription.paused,customer.subscription.resumed,customer.subscription.pending_update_applied,customer.subscription.pending_update_expired,customer.subscription.trial_will_end,invoice.paid,invoice.payment_failed,invoice.payment_action_required,invoice.upcoming,invoice.marked_uncollectible,invoice.payment_succeeded,payment_intent.succeeded,payment_intent.payment_failed,payment_intent.canceled \
+  --forward-to localhost:3000/api/webhooks/stripe
+```
+
+this will give you a webhook signing secret you can pass to .env
