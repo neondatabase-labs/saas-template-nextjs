@@ -1,10 +1,22 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { AlertTriangle, Users } from "lucide-react"
+import {
+	AlertTriangle,
+	Users,
+	CreditCard,
+	Zap,
+	Package,
+	Check,
+	Mail,
+	Shield,
+	Eye,
+	EyeOff,
+	Trash2,
+	TrashIcon,
+} from "lucide-react"
 import { useOptimistic, useRef, useState } from "react"
 import { useUser } from "@/stack-client"
 import Image from "next/image"
@@ -19,8 +31,21 @@ import {
 	sendVerificationEmail,
 } from "./actions"
 import { createCheckoutSession, createBillingPortalSession } from "./user/billing/actions"
-
-const plans = [{ name: "Pro Plan", description: "Advanced features for power users", code: "PRO" }]
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Separator } from "@/components/ui/separator"
+import {
+	AlertDialog,
+	AlertDialogTrigger,
+	AlertDialogContent,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogCancel,
+	AlertDialogAction,
+} from "@/components/ui/alert-dialog"
+import { cn } from "@/lib/utils"
 
 export function SettingsPageClient({
 	contactChannels: serverContactChannels,
@@ -44,6 +69,7 @@ export function SettingsPageClient({
 	const [avatarError, setAvatarError] = useState("")
 	const [passwordError, setPasswordError] = useState<string | null>(null)
 	const [deleteError, setDeleteError] = useState<string | null>(null)
+	const [showNewPassword, setShowNewPassword] = useState(false)
 
 	const [contactChannels, sendChannelEvent] = useOptimistic(
 		serverContactChannels,
@@ -71,7 +97,11 @@ export function SettingsPageClient({
 					return current.filter((channel) => channel.id !== event.id)
 				case "makePrimary":
 					return current.map((channel) => {
-						return { ...channel, isPrimary: channel.id === event.id }
+						return {
+							...channel,
+							isPrimary: channel.id === event.id,
+							usedForAuth: channel.id === event.id,
+						}
 					})
 			}
 		},
@@ -81,288 +111,305 @@ export function SettingsPageClient({
 	const isPro = subscriptionPlan === "PRO" && isActive
 
 	return (
-		<div className="space-y-8">
+		<div>
 			{/* Profile Settings */}
-			<Card>
-				<CardHeader>
-					<CardTitle>Profile</CardTitle>
-					<CardDescription>
-						Manage your personal information and how it appears to others.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<form
-						className="space-y-4"
-						onSubmit={(event) => {
-							event.preventDefault()
+			<section>
+				<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+					<div>
+						<h2 className="text-lg font-medium">Profile Picture</h2>
+						<p className="text-sm text-muted-foreground">
+							This will be displayed on your profile and across the platform.
+						</p>
+						<div className="mt-1">
+							<p className="text-sm text-destructive min-h-[1rem]">{avatarError}</p>
+						</div>
+					</div>
 
-							const form = event.target as HTMLFormElement
-							const displayName = form.displayName?.value
-							user.update({ displayName })
-						}}
-					>
-						<div className="space-y-4">
-							<div>
-								<label htmlFor="displayName" className="text-sm font-medium">
-									Display Name
-								</label>
-								<Input
-									id="displayName"
-									name="displayName"
-									defaultValue={user.displayName || ""}
-									placeholder="Enter your name"
-								/>
+					<div className="relative">
+						<label className="cursor-pointer">
+							<div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-background bg-muted flex items-center justify-center">
+								{user.profileImageUrl ? (
+									<Image
+										src={user.profileImageUrl}
+										alt={user.displayName || "User avatar"}
+										className="object-cover"
+										fill
+									/>
+								) : (
+									<Users className="h-12 w-12 text-muted-foreground" />
+								)}
 							</div>
-						</div>
-
-						<div className="flex justify-end">
-							<Button type="submit">Save Changes</Button>
-						</div>
-					</form>
-				</CardContent>
-			</Card>
-
-			{/* Avatar Settings */}
-			<Card>
-				<CardHeader>
-					<CardTitle>Avatar</CardTitle>
-					<CardDescription>Your profile picture across all services.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div className="flex items-center gap-4">
-						<div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-							{user.profileImageUrl ? (
-								<Image
-									src={user.profileImageUrl}
-									alt={user.displayName || "User avatar"}
-									className="h-full w-full object-cover"
-									width={128}
-									height={128}
-								/>
-							) : (
-								<Users className="h-8 w-8 text-muted-foreground" />
-							)}
-						</div>
-						<Button variant="outline" asChild>
-							<label className="cursor-pointer">
-								Upload Avatar
-								<ImageInput
-									className="hidden"
-									maxBytes={100_000}
-									onChange={(dataUrl) => {
-										setAvatarError("")
-										user.update({ profileImageUrl: dataUrl })
-									}}
-									onError={(error) => setAvatarError(error)}
-								/>
-							</label>
-						</Button>
+							<ImageInput
+								className="hidden"
+								maxBytes={100_000}
+								onChange={(dataUrl) => {
+									setAvatarError("")
+									user.update({ profileImageUrl: dataUrl })
+								}}
+								onError={(error) => setAvatarError(error)}
+							/>
+						</label>
 					</div>
-					<div className="mt-2">
-						<p className="text-sm text-destructive min-h-[1rem]">{avatarError}</p>
+				</div>
+
+				<form
+					className="flex gap-2 items-end max-w-md"
+					onSubmit={(event) => {
+						event.preventDefault()
+
+						const form = event.target as HTMLFormElement
+						const displayName = form.displayName?.value
+						user.update({ displayName })
+					}}
+				>
+					<div className="grow">
+						<Label htmlFor="displayName" className="text-sm">
+							Display Name
+						</Label>
+						<Input
+							id="displayName"
+							name="displayName"
+							defaultValue={user.displayName || ""}
+							placeholder="Enter your name"
+							className="mt-1"
+						/>
 					</div>
-				</CardContent>
-			</Card>
+
+					<div className="flex justify-end">
+						<Button type="submit">Save</Button>
+					</div>
+				</form>
+			</section>
 
 			{/* Billing Settings */}
-			<Card>
-				<CardHeader>
-					<CardTitle>Current Plan</CardTitle>
-					<CardDescription>Manage your subscription and billing details.</CardDescription>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					{/* Free Plan */}
-					<div className="flex items-center justify-between">
-						<div>
-							<h3 className="font-medium">
-								Free Plan
-								{subscriptionPlan === "FREE" && " (Current)"}
-							</h3>
-							<p className="text-sm text-muted-foreground">Basic features for personal use</p>
-						</div>
+			<div className="grid grid-cols-3 gap-6 mt-8">
+				<div className={cn(!isPro ? "col-span-2" : "rounded-lg border px-4 py-3 -my-3")}>
+					<div className="flex items-center gap-2">
+						<h2 className="text-xl font-medium">Free Plan</h2>
 					</div>
+					<p className="text-sm text-muted-foreground">Basic features for personal use</p>
 
-					{/* Paid Plans */}
-					{plans.map((plan) => (
-						<div key={plan.code} className="flex items-center justify-between">
-							<div>
-								<h3 className="font-medium">
-									{plan.name}
-									{subscriptionPlan === plan.code && " (Current"}
-									{subscriptionPlan === plan.code &&
-										isActive &&
-										subscriptionData.cancelAtPeriodEnd &&
-										` - Cancels on ${new Date(subscriptionData.currentPeriodEnd * 1000).toLocaleDateString()}`}
-									{subscriptionPlan === plan.code && ")"}
-								</h3>
-								<p className="text-sm text-muted-foreground">{plan.description}</p>
+					{!isPro ? (
+						<div className="space-y-4 mt-4">
+							<div className="space-y-2">
+								<div className="flex items-center justify-between text-sm">
+									<span>Storage</span>
+									<span className="font-medium">{"4.2 GB / 5 GB"}</span>
+								</div>
+								<Progress value={84} className="h-2" />
 							</div>
 
-							{subscriptionPlan === plan.code && isActive ? (
-								<form action={createBillingPortalSession}>
-									<Button type="submit" variant="outline">
-										Manage Subscription
-									</Button>
-								</form>
-							) : (
-								<form action={createCheckoutSession}>
-									<Button type="submit" variant="outline">
-										Upgrade
-									</Button>
-								</form>
-							)}
+							<div className="space-y-2">
+								<div className="flex items-center justify-between text-sm">
+									<span>Bandwidth</span>
+									<span className="font-medium">{"80 GB / 100 GB"}</span>
+								</div>
+								<Progress value={80} className="h-2" />
+							</div>
+						</div>
+					) : (
+						<ul className="grid gap-2 text-sm mt-4">
+							<li className="flex items-center gap-2">
+								<Zap className="h-4 w-4 text-primary" />
+								<span>Unlimited todos</span>
+							</li>
+							<li className="flex items-center gap-2">
+								<Package className="h-4 w-4 text-primary" />
+								<span>Basic project management</span>
+							</li>
+						</ul>
+					)}
+				</div>
+
+				<div className={cn(isPro ? "col-span-2" : "rounded-lg border px-4 py-3 -my-3")}>
+					<div className="space-y-1">
+						<div className="flex items-center gap-2">
+							<h2 className="text-xl font-medium">Pro Plan</h2>
+							{isPro ? (
+								<Badge className="bg-primary/20 text-primary hover:bg-primary/30">Active</Badge>
+							) : null}
+						</div>
+						<p className="text-sm text-muted-foreground">Advanced features for power users</p>
+					</div>
+
+					{isPro ? (
+						<div className="space-y-4 mt-4">
+							<div className="space-y-2">
+								<div className="flex items-center justify-between text-sm">
+									<span>Storage</span>
+									<span className="font-medium">{"45.5 GB / 50 GB"}</span>
+								</div>
+								<Progress value={91} className="h-2" />
+							</div>
+
+							<div className="space-y-2">
+								<div className="flex items-center justify-between text-sm">
+									<span>Bandwidth</span>
+									<span className="font-medium">{"650 GB / 1000 GB"}</span>
+								</div>
+								<Progress value={65} className="h-2" />
+							</div>
+						</div>
+					) : (
+						<ul className="grid gap-2 text-sm mt-4">
+							<li className="flex items-center gap-2">
+								<Zap className="h-4 w-4 text-primary" />
+								<span>Unlimited todos</span>
+							</li>
+							<li className="flex items-center gap-2">
+								<Package className="h-4 w-4 text-primary" />
+								<span>Basic project management</span>
+							</li>
+						</ul>
+					)}
+
+					<div className="mt-8 flex justify-end">
+						{isPro ? (
+							<form action={createBillingPortalSession}>
+								<Button type="submit" className="gap-2">
+									<CreditCard className="h-4 w-4" />
+									Manage Subscription
+								</Button>
+							</form>
+						) : (
+							<form action={createCheckoutSession}>
+								<Button type="submit" className="gap-2">
+									<CreditCard className="h-4 w-4" />
+									Upgrade to Pro
+								</Button>
+							</form>
+						)}
+					</div>
+				</div>
+			</div>
+
+			<Separator className="my-8" />
+
+			{/* Email Settings */}
+			<div className="mt-8">
+				<h2 className="text-lg font-medium flex items-center gap-2">
+					<Mail className="h-5 w-5" />
+					Email Addresses
+				</h2>
+				<p className="text-sm text-muted-foreground mt-1">
+					Manage the email addresses associated with your account.
+				</p>
+
+				<div className="mt-4 space-y-4  max-w-md">
+					{contactChannels.map((channel) => (
+						<div key={channel.id} className="">
+							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+								<div className="flex items-center gap-2">
+									<span className="font-medium">{channel.value}</span>
+									{channel.isVerified || isPendingVerification.includes(channel.id) ? null : (
+										<Badge
+											variant="outline"
+											className="bg-amber-50 text-amber-700 border-amber-200"
+										>
+											Unverified
+										</Badge>
+									)}
+									{channel.isPrimary && <Badge variant="secondary">Primary</Badge>}
+								</div>
+								<div className="flex items-center gap-2">
+									{channel.isVerified ? (
+										channel.isPrimary ? (
+											!channel.usedForAuth && user.hasPassword ? (
+												<form
+													action={async (formData) => {
+														sendChannelEvent({ type: "makePrimary", id: channel.id })
+														await makePrimaryContactChannel(formData)
+													}}
+												>
+													<input type="hidden" name="id" value={channel.id} />
+													<Button type="submit" variant="outline" size="xs">
+														Use for Auth
+													</Button>
+												</form>
+											) : (
+												<>{/* no action for primary verified email */}</>
+											)
+										) : (
+											<form
+												action={async (formData) => {
+													sendChannelEvent({ type: "makePrimary", id: channel.id })
+													await makePrimaryContactChannel(formData)
+												}}
+											>
+												<input type="hidden" name="id" value={channel.id} />
+												<Button type="submit" variant="outline" size="xs">
+													Make Primary
+												</Button>
+											</form>
+										)
+									) : isPendingVerification.includes(channel.id) ? (
+										<Badge
+											variant="outline"
+											className="bg-amber-50 text-amber-700 border-amber-200"
+										>
+											Verification email sent
+										</Badge>
+									) : (
+										<form
+											action={async (formData) => {
+												// TODO: move into useOptimistic
+												setIsPendingVerification([...isPendingVerification, channel.id])
+												await sendVerificationEmail(formData)
+											}}
+										>
+											<input type="hidden" name="id" value={channel.id} />
+											<Button type="submit" variant="outline" size="sm">
+												Verify by email
+											</Button>
+										</form>
+									)}
+									{!channel.isPrimary && (
+										<form action={deleteContactChannel}>
+											<input type="hidden" name="id" value={channel.id} />
+											<Button variant="ghost" size="sm" type="submit">
+												<TrashIcon className="h-4 w-4" />
+												<span className="sr-only">Remove</span>
+											</Button>
+										</form>
+									)}
+								</div>
+							</div>
 						</div>
 					))}
 
-					<div className="border-t pt-4 mt-4">
-						<h4 className="text-sm font-medium mb-2">Plan Features</h4>
-						<ul className="text-sm space-y-1">
-							<li className="flex items-center gap-2">
-								<span className="text-green-500">✓</span> Unlimited todos
-							</li>
-							<li className="flex items-center gap-2">
-								<span className="text-green-500">✓</span> Basic project management
-							</li>
-							<li className="flex items-center gap-2">
-								<span className={isPro ? "text-green-500" : "text-muted-foreground"}>
-									{isPro ? "✓" : "✗"}
-								</span>{" "}
-								Advanced analytics
-							</li>
-							<li className="flex items-center gap-2">
-								<span className={isPro ? "text-green-500" : "text-muted-foreground"}>
-									{isPro ? "✓" : "✗"}
-								</span>{" "}
-								Priority support
-							</li>
-						</ul>
-					</div>
-				</CardContent>
-			</Card>
+					<form
+						action={async (formData) => {
+							sendChannelEvent({ type: "addEmail", email: formData.get("email") as string })
+							formRef.current?.reset()
+							await addContactChannel(formData)
+						}}
+						className="space-y-4"
+					>
+						<div className="flex gap-2">
+							<Input name="email" type="email" placeholder="Add another email address" />
+							<Button type="submit">Add</Button>
+						</div>
+					</form>
+				</div>
+			</div>
 
-			{/* Email Settings */}
-			<Card>
-				<CardHeader>
-					<CardTitle>Email Address</CardTitle>
-					<CardDescription>Update the email address associated with your account.</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<div className="space-y-6">
-						{contactChannels.length > 0 && (
-							<div className="space-y-2">
-								{contactChannels.map((channel) => (
-									<div key={channel.id} className="flex items-center gap-2 text-sm">
-										<span>{channel.value}</span>
-										{channel.isVerified && (
-											<span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-												Verified
-											</span>
-										)}
-										{channel.isPrimary && (
-											<span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">
-												Primary
-											</span>
-										)}
-										<div className="flex grow justify-end">
-											{!channel.isPrimary ? (
-												<form
-													action={async (formData) => {
-														sendChannelEvent({ type: "removeEmail", id: channel.id })
-														await deleteContactChannel(formData)
-													}}
-												>
-													<input type="hidden" name="id" value={channel.id} />
-													<Button type="submit" variant="outline" size="xs">
-														Remove
-													</Button>
-												</form>
-											) : null}
-
-											{channel.isVerified ? (
-												channel.isPrimary ? (
-													!channel.usedForAuth && user.hasPassword ? (
-														<form
-															action={async (formData) => {
-																sendChannelEvent({ type: "makePrimary", id: channel.id })
-																await makePrimaryContactChannel(formData)
-															}}
-														>
-															<input type="hidden" name="id" value={channel.id} />
-															<Button type="submit" variant="outline" size="xs">
-																Use for Auth
-															</Button>
-														</form>
-													) : (
-														<>{/* no action for primary verified email */}</>
-													)
-												) : (
-													<form
-														action={async (formData) => {
-															sendChannelEvent({ type: "makePrimary", id: channel.id })
-															await makePrimaryContactChannel(formData)
-														}}
-													>
-														<input type="hidden" name="id" value={channel.id} />
-														<Button type="submit" variant="outline" size="xs">
-															Make Primary
-														</Button>
-													</form>
-												)
-											) : isPendingVerification.includes(channel.id) ? (
-												<span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-													Verifying...
-												</span>
-											) : (
-												<form
-													action={async (formData) => {
-														setIsPendingVerification([...isPendingVerification, channel.id])
-														await sendVerificationEmail(formData)
-													}}
-												>
-													<input type="hidden" name="id" value={channel.id} />
-													<Button type="submit" variant="outline" size="xs">
-														Send verification email
-													</Button>
-												</form>
-											)}
-										</div>
-									</div>
-								))}
-							</div>
-						)}
-
-						<form
-							ref={formRef}
-							action={async (formData) => {
-								sendChannelEvent({ type: "addEmail", email: formData.get("email") as string })
-								formRef.current?.reset()
-								await addContactChannel(formData)
-							}}
-							className="space-y-4"
-						>
-							<div className="flex gap-2">
-								<Input name="email" type="email" placeholder="Add another email address" />
-								<Button type="submit">Add</Button>
-							</div>
-						</form>
-					</div>
-				</CardContent>
-			</Card>
+			<Separator className="my-8" />
 
 			{/* Password Settings */}
-			<Card>
-				<CardHeader>
-					<CardTitle>{user.hasPassword ? "Change Password" : "Set Up Password"}</CardTitle>
-					<CardDescription>
-						{user.hasPassword
-							? "Update your account password."
-							: "Add a password to enable password-based login as an alternative to your current sign-in method."}
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
+			<div>
+				<h2 className="text-lg font-medium flex items-center gap-2">
+					<Shield className="h-5 w-5" />
+					Password
+				</h2>
+				<p className="text-sm text-muted-foreground mt-1">
+					Update your password to keep your account secure.
+				</p>
+
+				<div className="mt-6 space-y-4 max-w-md">
 					<form
 						action={async (formData) => {
 							const result = await updatePassword(formData)
+							// todo: replace with useActionState
 							setPasswordError(result.success ? null : result.error)
 						}}
 						className="space-y-4"
@@ -383,13 +430,31 @@ export function SettingsPageClient({
 
 							<div className="grid gap-2">
 								<Label htmlFor="new-password">New Password</Label>
-								<Input
-									id="new-password"
-									name="newPassword"
-									type="password"
-									placeholder="Enter new password"
-									onBlur={() => setPasswordError(null)}
-								/>
+								<div className="relative">
+									<Input
+										id="new-password"
+										name="newPassword"
+										type={showNewPassword ? "text" : "password"}
+										placeholder="Enter new password"
+										onBlur={() => setPasswordError(null)}
+									/>
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+										onClick={() => setShowNewPassword(!showNewPassword)}
+									>
+										{showNewPassword ? (
+											<EyeOff className="h-4 w-4 text-muted-foreground" />
+										) : (
+											<Eye className="h-4 w-4 text-muted-foreground" />
+										)}
+										<span className="sr-only">
+											{showNewPassword ? "Hide password" : "Show password"}
+										</span>
+									</Button>
+								</div>
 							</div>
 						</div>
 
@@ -399,46 +464,81 @@ export function SettingsPageClient({
 							</div>
 							<div className="flex justify-end">
 								<Button type="submit">
+									<Check className="h-4 w-4" />{" "}
 									{user.hasPassword ? "Update Password" : "Set Password"}
 								</Button>
 							</div>
 						</div>
 					</form>
-				</CardContent>
-			</Card>
+				</div>
+			</div>
 
+			<Separator className="my-6" />
 			{/* Danger Zone */}
-			<Card className="border-red-200">
-				<CardHeader>
-					<div className="flex items-center gap-2">
-						<AlertTriangle className="h-5 w-5 text-red-500" />
-						<CardTitle className="text-red-500">Danger Zone</CardTitle>
-					</div>
-					<CardDescription>
-						Permanently delete your account and all associated data.
-					</CardDescription>
-				</CardHeader>
-				<CardContent>
-					<form
-						action={async (formData) => {
-							const result = await deleteAccount(formData)
-							setDeleteError(result.success ? null : result.error)
-						}}
-						className="space-y-4"
-					>
-						<div className="flex flex-col gap-4">
-							<div id="delete-error" aria-live="polite" className="text-sm text-red-500">
-								{deleteError}
+			<div>
+				<h2 className="text-lg font-medium flex items-center gap-2 text-destructive">
+					<AlertTriangle className="h-5 w-5" />
+					Danger Zone
+				</h2>
+				<p className="text-sm text-muted-foreground mt-1">
+					Permanently delete your account and all associated data.
+				</p>
+
+				<div className="mt-6">
+					<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+						<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+							<div>
+								<h3 className="font-medium text-destructive">Delete Account</h3>
+								{isActive ? (
+									<p className="text-sm text-muted-foreground mt-1">
+										You must cancel your subscription before you can delete your account.
+									</p>
+								) : (
+									<p className="text-sm text-muted-foreground mt-1">
+										Once you delete your account, there is no going back. This action cannot be
+										undone.
+									</p>
+								)}
 							</div>
-							<div className="flex justify-end">
-								<Button type="submit" variant="destructive">
-									Delete Account
-								</Button>
-							</div>
+
+							<AlertDialog>
+								<AlertDialogTrigger asChild>
+									<Button variant="destructive" size="sm" className="gap-2" disabled={isActive}>
+										<Trash2 className="h-4 w-4" />
+										Delete Account
+									</Button>
+								</AlertDialogTrigger>
+								<AlertDialogContent>
+									<AlertDialogHeader>
+										<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+										<AlertDialogDescription>
+											This action cannot be undone. This will permanently delete your account and
+											remove all your data from our servers.
+										</AlertDialogDescription>
+									</AlertDialogHeader>
+									<AlertDialogFooter>
+										<AlertDialogCancel>Cancel</AlertDialogCancel>
+										<form
+											action={async (formData) => {
+												const result = await deleteAccount(formData)
+												setDeleteError(result.success ? null : result.error)
+											}}
+											className="space-y-4"
+										>
+											<AlertDialogAction
+												type="submit"
+												className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+											>
+												Delete
+											</AlertDialogAction>
+										</form>
+									</AlertDialogFooter>
+								</AlertDialogContent>
+							</AlertDialog>
 						</div>
-					</form>
-				</CardContent>
-			</Card>
+					</div>
+				</div>
+			</div>
 		</div>
 	)
 }
