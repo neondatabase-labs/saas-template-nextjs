@@ -2,7 +2,6 @@
 
 import { getAccessToken, stackServerApp } from "@/stack"
 import { revalidatePath } from "next/cache"
-import { revalidateAccountSettings } from "./page"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 
@@ -81,12 +80,12 @@ export async function deleteAccount(formData: FormData) {
 	const confirmDelete = formData.get("confirmDelete") as string
 
 	if (confirmDelete !== "DELETE") {
-		return { error: "Please type DELETE to confirm account deletion" }
+		return { success: false as const, error: "Please type DELETE to confirm account deletion" }
 	}
 
 	const user = await stackServerApp.getUser()
 	if (!user) {
-		return { error: "Not authenticated" }
+		return { success: false as const, error: "Not authenticated" }
 	}
 
 	await user.delete()
@@ -102,7 +101,7 @@ export async function addContactChannel(formData: FormData) {
 
 	await user.createContactChannel({ type: "email", value: email, usedForAuth: false })
 
-	void revalidateAccountSettings()
+	void revalidatePath("/app/settings")
 }
 
 export async function deleteContactChannel(formData: FormData) {
@@ -142,7 +141,7 @@ export async function deleteContactChannel(formData: FormData) {
 		throw new Error(response.error)
 	}
 
-	void revalidateAccountSettings()
+	void revalidatePath("/app/settings")
 }
 
 export async function makePrimaryContactChannel(formData: FormData) {
@@ -181,7 +180,7 @@ export async function makePrimaryContactChannel(formData: FormData) {
 		throw new Error(response.error)
 	}
 
-	void revalidateAccountSettings()
+	void revalidatePath("/app/settings")
 }
 
 export async function sendVerificationEmail(formData: FormData) {
@@ -222,7 +221,7 @@ export async function sendVerificationEmail(formData: FormData) {
 		throw new Error(response.error)
 	}
 
-	void revalidateAccountSettings()
+	void revalidatePath("/app/settings")
 
 	// const contactChannels = await user.listContactChannels()
 
@@ -233,4 +232,35 @@ export async function sendVerificationEmail(formData: FormData) {
 	// }
 
 	// await contactChannel.sendVerificationEmail()
+}
+
+
+// Moved from account/page.tsx
+export async function verifyContactChannel({ code }: { code: string }) {
+	const accessToken = await getAccessToken(await cookies())
+	if (!accessToken) {
+		throw new Error("No access token found")
+	}
+
+	const response = await fetch(`https://api.stack-auth.com/api/v1/contact-channels/verify`, {
+		method: "POST",
+		body: JSON.stringify({
+			code,
+		}),
+		headers: {
+			"Content-Type": "application/json",
+			"X-Stack-Access-Type": "server",
+			"X-Stack-Project-Id": stackServerApp.projectId,
+			"X-Stack-Publishable-Client-Key": process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!,
+			"X-Stack-Secret-Server-Key": process.env.STACK_SECRET_SERVER_KEY!,
+			"X-Stack-Access-Token": accessToken,
+		},
+	}).then((res) => res.json())
+
+	if (!response.success) {
+		if (response.error === "The verification link has already been used.") {
+			return
+		}
+		throw new Error(response.error)
+	}
 }

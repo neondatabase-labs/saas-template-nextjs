@@ -4,9 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle, Users } from "lucide-react"
 import { useOptimistic, useRef, useState } from "react"
 import { useUser } from "@/stack-client"
+import Image from "next/image"
+import { ImageInput } from "@/components/image-input"
+import { StripePlan, type STRIPE_SUB_CACHE } from "@/lib/stripe"
 import {
 	updatePassword,
 	deleteAccount,
@@ -15,9 +18,14 @@ import {
 	makePrimaryContactChannel,
 	sendVerificationEmail,
 } from "./actions"
+import { createCheckoutSession, createBillingPortalSession } from "./user/billing/actions"
 
-export function AccountSettingsPageClient({
+const plans = [{ name: "Pro Plan", description: "Advanced features for power users", code: "PRO" }]
+
+export function SettingsPageClient({
 	contactChannels: serverContactChannels,
+	subscriptionPlan,
+	subscriptionData,
 }: {
 	contactChannels: Array<{
 		id: string
@@ -27,10 +35,16 @@ export function AccountSettingsPageClient({
 		isVerified: boolean
 		usedForAuth: boolean
 	}>
+	subscriptionPlan: StripePlan
+	subscriptionData: STRIPE_SUB_CACHE
 }) {
 	const user = useUser({ or: "redirect" })
 	const formRef = useRef<HTMLFormElement>(null)
 	const [isPendingVerification, setIsPendingVerification] = useState<string[]>([])
+	const [avatarError, setAvatarError] = useState("")
+	const [passwordError, setPasswordError] = useState<string | null>(null)
+	const [deleteError, setDeleteError] = useState<string | null>(null)
+
 	const [contactChannels, sendChannelEvent] = useOptimistic(
 		serverContactChannels,
 		(
@@ -63,11 +77,169 @@ export function AccountSettingsPageClient({
 		},
 	)
 
-	const [passwordError, setPasswordError] = useState<string | null>(null)
-	const [deleteError, setDeleteError] = useState<string | null>(null)
+	const isActive = subscriptionData.status === "active"
+	const isPro = subscriptionPlan === "PRO" && isActive
 
 	return (
 		<div className="space-y-8">
+			{/* Profile Settings */}
+			<Card>
+				<CardHeader>
+					<CardTitle>Profile</CardTitle>
+					<CardDescription>
+						Manage your personal information and how it appears to others.
+					</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<form
+						className="space-y-4"
+						onSubmit={(event) => {
+							event.preventDefault()
+
+							const form = event.target as HTMLFormElement
+							const displayName = form.displayName?.value
+							user.update({ displayName })
+						}}
+					>
+						<div className="space-y-4">
+							<div>
+								<label htmlFor="displayName" className="text-sm font-medium">
+									Display Name
+								</label>
+								<Input
+									id="displayName"
+									name="displayName"
+									defaultValue={user.displayName || ""}
+									placeholder="Enter your name"
+								/>
+							</div>
+						</div>
+
+						<div className="flex justify-end">
+							<Button type="submit">Save Changes</Button>
+						</div>
+					</form>
+				</CardContent>
+			</Card>
+
+			{/* Avatar Settings */}
+			<Card>
+				<CardHeader>
+					<CardTitle>Avatar</CardTitle>
+					<CardDescription>Your profile picture across all services.</CardDescription>
+				</CardHeader>
+				<CardContent>
+					<div className="flex items-center gap-4">
+						<div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+							{user.profileImageUrl ? (
+								<Image
+									src={user.profileImageUrl}
+									alt={user.displayName || "User avatar"}
+									className="h-full w-full object-cover"
+									width={128}
+									height={128}
+								/>
+							) : (
+								<Users className="h-8 w-8 text-muted-foreground" />
+							)}
+						</div>
+						<Button variant="outline" asChild>
+							<label className="cursor-pointer">
+								Upload Avatar
+								<ImageInput
+									className="hidden"
+									maxBytes={100_000}
+									onChange={(dataUrl) => {
+										setAvatarError("")
+										user.update({ profileImageUrl: dataUrl })
+									}}
+									onError={(error) => setAvatarError(error)}
+								/>
+							</label>
+						</Button>
+					</div>
+					<div className="mt-2">
+						<p className="text-sm text-destructive min-h-[1rem]">{avatarError}</p>
+					</div>
+				</CardContent>
+			</Card>
+
+			{/* Billing Settings */}
+			<Card>
+				<CardHeader>
+					<CardTitle>Current Plan</CardTitle>
+					<CardDescription>Manage your subscription and billing details.</CardDescription>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					{/* Free Plan */}
+					<div className="flex items-center justify-between">
+						<div>
+							<h3 className="font-medium">
+								Free Plan
+								{subscriptionPlan === "FREE" && " (Current)"}
+							</h3>
+							<p className="text-sm text-muted-foreground">Basic features for personal use</p>
+						</div>
+					</div>
+
+					{/* Paid Plans */}
+					{plans.map((plan) => (
+						<div key={plan.code} className="flex items-center justify-between">
+							<div>
+								<h3 className="font-medium">
+									{plan.name}
+									{subscriptionPlan === plan.code && " (Current"}
+									{subscriptionPlan === plan.code &&
+										isActive &&
+										subscriptionData.cancelAtPeriodEnd &&
+										` - Cancels on ${new Date(subscriptionData.currentPeriodEnd * 1000).toLocaleDateString()}`}
+									{subscriptionPlan === plan.code && ")"}
+								</h3>
+								<p className="text-sm text-muted-foreground">{plan.description}</p>
+							</div>
+
+							{subscriptionPlan === plan.code && isActive ? (
+								<form action={createBillingPortalSession}>
+									<Button type="submit" variant="outline">
+										Manage Subscription
+									</Button>
+								</form>
+							) : (
+								<form action={createCheckoutSession}>
+									<Button type="submit" variant="outline">
+										Upgrade
+									</Button>
+								</form>
+							)}
+						</div>
+					))}
+
+					<div className="border-t pt-4 mt-4">
+						<h4 className="text-sm font-medium mb-2">Plan Features</h4>
+						<ul className="text-sm space-y-1">
+							<li className="flex items-center gap-2">
+								<span className="text-green-500">✓</span> Unlimited todos
+							</li>
+							<li className="flex items-center gap-2">
+								<span className="text-green-500">✓</span> Basic project management
+							</li>
+							<li className="flex items-center gap-2">
+								<span className={isPro ? "text-green-500" : "text-muted-foreground"}>
+									{isPro ? "✓" : "✗"}
+								</span>{" "}
+								Advanced analytics
+							</li>
+							<li className="flex items-center gap-2">
+								<span className={isPro ? "text-green-500" : "text-muted-foreground"}>
+									{isPro ? "✓" : "✗"}
+								</span>{" "}
+								Priority support
+							</li>
+						</ul>
+					</div>
+				</CardContent>
+			</Card>
+
 			{/* Email Settings */}
 			<Card>
 				<CardHeader>
@@ -109,7 +281,6 @@ export function AccountSettingsPageClient({
 											{channel.isVerified ? (
 												channel.isPrimary ? (
 													!channel.usedForAuth && user.hasPassword ? (
-														// generally we won't see this, because we set primary at the same time as usedForAuth
 														<form
 															action={async (formData) => {
 																sendChannelEvent({ type: "makePrimary", id: channel.id })
@@ -122,7 +293,7 @@ export function AccountSettingsPageClient({
 															</Button>
 														</form>
 													) : (
-														<>{/* // no action for primary verified email */}</>
+														<>{/* no action for primary verified email */}</>
 													)
 												) : (
 													<form
@@ -144,7 +315,6 @@ export function AccountSettingsPageClient({
 											) : (
 												<form
 													action={async (formData) => {
-														// TODO: React wraps this in startTransition which makes it slow
 														setIsPendingVerification([...isPendingVerification, channel.id])
 														await sendVerificationEmail(formData)
 													}}
@@ -237,6 +407,7 @@ export function AccountSettingsPageClient({
 				</CardContent>
 			</Card>
 
+			{/* Danger Zone */}
 			<Card className="border-red-200">
 				<CardHeader>
 					<div className="flex items-center gap-2">
@@ -251,32 +422,19 @@ export function AccountSettingsPageClient({
 					<form
 						action={async (formData) => {
 							const result = await deleteAccount(formData)
-							if (result?.error) {
-								setDeleteError(result.error)
-							}
+							setDeleteError(result.success ? null : result.error)
 						}}
 						className="space-y-4"
 					>
-						<p className="text-sm">
-							Once you delete your account, there is no going back. This action cannot be undone.
-							All your data will be permanently deleted.
-						</p>
-
-						<div className="grid gap-2">
-							<Label htmlFor="confirm-delete">Type DELETE to confirm</Label>
-							<Input
-								id="confirm-delete"
-								name="confirmDelete"
-								placeholder="DELETE"
-								onFocus={() => setDeleteError(null)}
-							/>
-							{deleteError && <p className="text-sm text-red-500">{deleteError}</p>}
-						</div>
-
-						<div className="flex justify-end">
-							<Button type="submit" variant="destructive">
-								Delete Account
-							</Button>
+						<div className="flex flex-col gap-4">
+							<div id="delete-error" aria-live="polite" className="text-sm text-red-500">
+								{deleteError}
+							</div>
+							<div className="flex justify-end">
+								<Button type="submit" variant="destructive">
+									Delete Account
+								</Button>
+							</div>
 						</div>
 					</form>
 				</CardContent>
