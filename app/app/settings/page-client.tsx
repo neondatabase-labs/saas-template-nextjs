@@ -19,7 +19,7 @@ import { useOptimistic, useRef, useState } from "react"
 import { useUser } from "@/stack-client"
 import Image from "next/image"
 import { ImageInput } from "@/components/image-input"
-import { StripePlan, type STRIPE_SUB_CACHE } from "@/lib/stripe"
+import type { StripePlanId } from "@/lib/stripe/app"
 import {
 	updatePassword,
 	deleteAccount,
@@ -27,8 +27,9 @@ import {
 	deleteContactChannel,
 	makePrimaryContactChannel,
 	sendVerificationEmail,
+	createCheckoutSession,
+	createBillingPortalSession,
 } from "./actions"
-import { createCheckoutSession, createBillingPortalSession } from "./user/billing/actions"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
@@ -47,8 +48,7 @@ import { Card, CardTitle, CardHeader, CardDescription, CardFooter } from "@/comp
 
 export function SettingsPageClient({
 	contactChannels: serverContactChannels,
-	subscriptionPlan,
-	subscriptionData,
+	planId,
 }: {
 	contactChannels: Array<{
 		id: string
@@ -58,8 +58,7 @@ export function SettingsPageClient({
 		isVerified: boolean
 		usedForAuth: boolean
 	}>
-	subscriptionPlan: StripePlan
-	subscriptionData: STRIPE_SUB_CACHE
+	planId: StripePlanId
 }) {
 	const user = useUser({ or: "redirect" })
 	const formRef = useRef<HTMLFormElement>(null)
@@ -105,8 +104,7 @@ export function SettingsPageClient({
 		},
 	)
 
-	const isActive = subscriptionData.status === "active"
-	const isPro = subscriptionPlan === "PRO" && isActive
+	const isPro = planId === "PRO"
 	return (
 		<div>
 			{/* Profile Settings */}
@@ -479,7 +477,7 @@ export function SettingsPageClient({
 					<Card className="flex-row">
 						<CardHeader className="grow">
 							<CardTitle>Delete Account</CardTitle>
-							{isActive ? (
+							{isPro ? (
 								<CardDescription>
 									You must cancel your subscription before you can delete your account.
 								</CardDescription>
@@ -491,7 +489,7 @@ export function SettingsPageClient({
 							)}
 						</CardHeader>
 
-						{isActive ? null : (
+						{isPro ? null : (
 							<CardFooter>
 								<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 									<AlertDialog>

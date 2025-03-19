@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation"
 import { stackServerApp } from "@/stack"
-import { getUserSubscriptionPlan, getStripeCustomer, STRIPE_SUB_CACHE } from "@/lib/stripe"
-import { kv } from "@vercel/kv"
+import { getStripePlan } from "@/lib/stripe/app"
 import { SettingsPageClient } from "./page-client"
 import { verifyContactChannel } from "./actions"
+import { getStripeCustomerId, syncStripeDataToKV } from "@/lib/stripe/kv"
 
 export default async function SettingsPage({
 	searchParams: searchParamsPromise,
@@ -13,31 +13,26 @@ export default async function SettingsPage({
 	const searchParams = await searchParamsPromise
 	const user = await stackServerApp.getUser({ or: "redirect" })
 
-	// Handle contact channel verification
 	if (searchParams.code && !Array.isArray(searchParams.code)) {
+		// Handle contact channel verification
 		await verifyContactChannel({ code: searchParams.code })
 		redirect("/app/settings")
 	}
 
-	// Get billing data
-	const subscriptionPlan = await getUserSubscriptionPlan(user?.id)
-	const customerId = await getStripeCustomer(user.id)
-
-	let subscriptionData: STRIPE_SUB_CACHE = { status: "none" }
-	if (customerId) {
-		const data = await kv.get(`stripe:customer:${customerId.id}`)
-		if (data && typeof data === "object" && "status" in data && data.status !== "none") {
-			subscriptionData = data as STRIPE_SUB_CACHE
+	if (searchParams.success) {
+		const customerId = await getStripeCustomerId(user?.id)
+		if (customerId) {
+			await syncStripeDataToKV(customerId)
 		}
+		redirect("/app/settings")
 	}
 
-	// Get contact channels
+	const plan = await getStripePlan(user?.id)
 	const contactChannels = await user?.listContactChannels()
 
 	return (
 		<SettingsPageClient
-			subscriptionPlan={subscriptionPlan}
-			subscriptionData={subscriptionData}
+			planId={plan.id}
 			contactChannels={
 				contactChannels?.map((channel) => ({
 					id: channel.id,

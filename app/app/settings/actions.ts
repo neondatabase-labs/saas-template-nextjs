@@ -4,8 +4,7 @@ import { getAccessToken, stackServerApp } from "@/stack"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import { getStripeCustomer, STRIPE_SUB_CACHE } from "@/lib/stripe"
-import { kv } from "@vercel/kv"
+import { getStripePlan, redirectToBillingPortal, redirectToCheckout } from "@/lib/stripe/app"
 
 export async function updateEmail(formData: FormData) {
 	const newEmail = formData.get("newEmail") as string
@@ -69,8 +68,8 @@ export async function updatePassword(formData: FormData) {
 	} else {
 		const error = await user.setPassword({ password: newPassword })
 		if (error) {
-		  console.error("Failed to set password:", error)
-		  return { success: false as const, error: error.message }
+			console.error("Failed to set password:", error)
+			return { success: false as const, error: error.message }
 		}
 	}
 
@@ -84,19 +83,12 @@ export async function deleteAccount() {
 		return { success: false as const, error: "Not authenticated" }
 	}
 
-	// Retrieve customer ID
-	const customerId = await getStripeCustomer(user.id)
-	let subscriptionData: STRIPE_SUB_CACHE = { status: "none" }
-	if (customerId) {
-		const data = await kv.get(`stripe:customer:${customerId.id}`)
-		if (data && typeof data === "object" && "status" in data && data.status !== "none") {
-			subscriptionData = data as STRIPE_SUB_CACHE
+	const plan = await getStripePlan(user.id)
+	if (plan.id === "PRO") {
+		return {
+			success: false as const,
+			error: "You must cancel your subscription before deleting your account.",
 		}
-	}
-
-	if (subscriptionData.status === "active") {
-		// This also blocks deleting an account if they cancel but haven't reached the end of their billing period yet
-		return { success: false as const, error: "You must cancel your subscription before deleting your account." }
 	}
 
 	await user.delete()
@@ -245,7 +237,6 @@ export async function sendVerificationEmail(formData: FormData) {
 	// await contactChannel.sendVerificationEmail()
 }
 
-
 // Moved from account/page.tsx
 export async function verifyContactChannel({ code }: { code: string }) {
 	const accessToken = await getAccessToken(await cookies())
@@ -274,4 +265,34 @@ export async function verifyContactChannel({ code }: { code: string }) {
 		}
 		throw new Error(response.error)
 	}
+}
+
+
+	
+export async function createCheckoutSession() {
+	const user = await stackServerApp.getUser()
+	if (!user) {
+		throw new Error("Not authenticated")
+	}
+
+	if (!user.primaryEmailVerified || !user.primaryEmail) {
+		throw new Error("Email not verified")
+	}
+
+	await redirectToCheckout({
+		userId: user.id,
+		email: user.primaryEmail,
+		name: user.displayName,
+	})
+}
+
+export async function createBillingPortalSession() {
+	const user = await stackServerApp.getUser()
+	if (!user) {
+		throw new Error("Not authenticated")
+	}
+
+	await redirectToBillingPortal({
+		userId: user.id,
+	})
 }
