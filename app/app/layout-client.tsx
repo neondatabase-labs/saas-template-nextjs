@@ -12,19 +12,39 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { useUser } from "@/stack-client"
+import { useStackApp } from "@stackframe/stack"
+import { usePathname } from "next/navigation"
+import { cn } from "@/lib/utils"
+
+const navItems = [
+	{ label: "Dashboard", href: "/app/todos" },
+	{ label: "Settings", href: "/app/settings" },
+]
 
 export function AppLayoutClient({ children }: { children: React.ReactNode }) {
-	// const user = await stackServerApp.getUser()
-	// const app = stackServerApp.urls
-	// const userProfile = await getUserDetails(user?.id)
 	const user = useUser()
+	const app = useStackApp()
+	const pathname = usePathname()
 
 	return (
 		<div>
-			<header className="w-full flex justify-between items-center px-6 py-4 z-10">
+			<header className="w-full flex gap-x-2 items-center px-4 py-2 z-10 border-b border-gray-200">
 				<div className="font-bold text-lg uppercase tracking-tight">
-					<Link href="/app"> Neon Auth NextJS Stripe Template </Link>
+					<Link href="/app"> Neon Stripe </Link>
 				</div>
+
+				{navItems.map((item) => (
+					<Button
+						key={item.href}
+						variant="ghost"
+						asChild
+						className={cn(pathname === item.href && "bg-gray-100")}
+					>
+						<Link href={item.href}>{item.label}</Link>
+					</Button>
+				))}
+
+				<div className="grow" />
 				{user ? (
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
@@ -53,7 +73,7 @@ export function AppLayoutClient({ children }: { children: React.ReactNode }) {
 								</Link>
 							</DropdownMenuItem>
 							<DropdownMenuItem asChild>
-								<Link href="/handler/sign-out" className="flex items-center gap-2">
+								<Link href={app.urls.signOut} className="flex items-center gap-2">
 									Sign Out
 								</Link>
 							</DropdownMenuItem>
@@ -61,18 +81,18 @@ export function AppLayoutClient({ children }: { children: React.ReactNode }) {
 					</DropdownMenu>
 				) : (
 					<div className="flex items-center gap-3">
-						{/* <Link
-							href={app.signIn}
+						<Link
+							href={app.urls.signIn}
 							className="inline-flex h-8 items-center justify-center rounded-md px-4 text-[13px] font-medium text-gray-700 transition-all hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
 						>
 							Log In
 						</Link>
 						<Link
-							href={app.signUp}
+							href={app.urls.signUp}
 							className="inline-flex h-8 items-center justify-center font-medium  text-center rounded-full outline-hidden   dark:text-black bg-primary-1 hover:bg-[#00e5bf] whitespace-nowrap px-6 text-[13px] transition-colors duration-200"
 						>
 							Sign Up
-						</Link> */}
+						</Link>
 					</div>
 				)}
 			</header>

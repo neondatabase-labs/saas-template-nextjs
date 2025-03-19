@@ -21,7 +21,6 @@ export const stripe = remember(
 )
 
 const KvStripeCustomerSchema = z.object({
-  id: z.string(),
   subscriptionId: z.string(),
   status: z.union([
     z.literal("active"),
@@ -45,10 +44,10 @@ const KvStripeCustomerSchema = z.object({
 
 export async function getStripeCustomer(customerId: string) {
   const customer = await kv.get(`stripe:customer:${customerId}`)
-  return KvStripeCustomerSchema.nullable().parse(customer)
+  return KvStripeCustomerSchema.nullish().parse(customer)
 }
 
-const KvStripeUserSchema = z.string().nullable()
+const KvStripeUserSchema = z.string().nullish()
 
 export async function getStripeCustomerId(userId: string) {
   return KvStripeUserSchema.parse(await kv.get(`stripe:user:${userId}`))
