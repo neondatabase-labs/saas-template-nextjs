@@ -4,7 +4,7 @@ import { getStripeCustomerId, processStripeEvent, syncStripeDataToKV } from "@/l
 import { redirect } from "next/navigation"
 import { stackServerApp } from "@/stack"
 
-// Send the user here after they complete the checkout process
+// Send users to GET /api/stripe after they complete the checkout process
 export async function GET() {
 	const user = await stackServerApp.getUser({ or: "redirect" })
 	if (!user) {
@@ -19,7 +19,7 @@ export async function GET() {
 	redirect("/app/settings")
 }
 
-// Send webhooks here
+// Send webhooks to POST /api/stripe
 export async function POST(req: Request) {
 	const body = await req.text()
 	const signature = await headers().then((h) => h.get("Stripe-Signature"))
