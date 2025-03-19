@@ -1,25 +1,8 @@
 /**
  * This is the file you should edit to add Stripe features to your project.
  */
-import { Stripe } from "stripe"
-import { createStripeCustomer, getStripeCustomer, getStripeCustomerId } from "./kv"
+import { createStripeCustomer, getStripeCustomer, getStripeCustomerId, stripe } from "@/lib/stripe"
 import { redirect } from "next/navigation"
-import { remember } from "@epic-web/remember"
-
-
-export const stripe = remember(
-  "stripe",
-  () => {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error("STRIPE_SECRET_KEY is not set")
-    }
-
-    return new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2025-02-24.acacia",
-      typescript: true,
-    })
-  }
-)
 
 const plans = [
 	{ id: "FREE", priceId: undefined },
@@ -76,8 +59,8 @@ export async function redirectToCheckout({
 			},
 		],
 		mode: "subscription",
-		success_url: `${process.env.NEXT_PUBLIC_APP_URL}/app/settings?success=true`,
-		cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/app/settings?canceled=true`,
+		success_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/stripe`,
+		cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/stripe`,
 		metadata: {
 			userId,
 		},

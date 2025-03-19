@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation"
 import { stackServerApp } from "@/stack"
-import { getStripePlan } from "@/lib/stripe/app"
+import { getStripePlan } from "@/app/api/stripe/client"
 import { SettingsPageClient } from "./page-client"
 import { verifyContactChannel } from "./actions"
-import { getStripeCustomerId, syncStripeDataToKV } from "@/lib/stripe/kv"
+import { getStripeCustomerId, syncStripeDataToKV } from "@/lib/stripe"
 
 export default async function SettingsPage({
 	searchParams: searchParamsPromise,

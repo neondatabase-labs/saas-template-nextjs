@@ -3,8 +3,23 @@
  */
 import { kv } from "@vercel/kv"
 import { z } from "zod"
-import { stripe } from "./app"
-import type { Stripe } from "stripe"
+import { Stripe } from "stripe"
+import { remember } from "@epic-web/remember"
+
+export const stripe = remember(
+  "stripe",
+  () => {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error("STRIPE_SECRET_KEY is not set")
+    }
+
+    return new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2025-02-24.acacia",
+      typescript: true,
+    })
+  }
+)
+
 
 const KvStripeCustomerSchema = z.object({
   id: z.string(),
