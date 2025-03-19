@@ -23,7 +23,7 @@ export const stackServerApp = remember(
 			tokenStore: "nextjs-cookie",
 			redirectMethod: "nextjs",
 			urls: {
-				afterSignIn: "/app/settings/user",
+				afterSignIn: "/app",
 			},
 		}),
 )

@@ -4,6 +4,8 @@ import { getAccessToken, stackServerApp } from "@/stack"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
+import { getStripeCustomer, STRIPE_SUB_CACHE } from "@/lib/stripe"
+import { kv } from "@vercel/kv"
 
 export async function updateEmail(formData: FormData) {
 	const newEmail = formData.get("newEmail") as string
@@ -27,7 +29,7 @@ export async function updateEmail(formData: FormData) {
 		// This is a placeholder for the actual implementation
 		// await user.updateEmail({ newEmail, password })
 
-		revalidatePath("/settings/user/account")
+		revalidatePath("/settings")
 		return { success: true, message: "Email updated successfully" }
 	} catch (error) {
 		console.error("Failed to update email:", error)
@@ -72,20 +74,29 @@ export async function updatePassword(formData: FormData) {
 		}
 	}
 
-	revalidatePath("/settings/user/account")
+	revalidatePath("/settings")
 	return { success: true as const, message: "Password updated successfully" }
 }
 
-export async function deleteAccount(formData: FormData) {
-	const confirmDelete = formData.get("confirmDelete") as string
-
-	if (confirmDelete !== "DELETE") {
-		return { success: false as const, error: "Please type DELETE to confirm account deletion" }
-	}
-
+export async function deleteAccount() {
 	const user = await stackServerApp.getUser()
 	if (!user) {
 		return { success: false as const, error: "Not authenticated" }
+	}
+
+	// Retrieve customer ID
+	const customerId = await getStripeCustomer(user.id)
+	let subscriptionData: STRIPE_SUB_CACHE = { status: "none" }
+	if (customerId) {
+		const data = await kv.get(`stripe:customer:${customerId.id}`)
+		if (data && typeof data === "object" && "status" in data && data.status !== "none") {
+			subscriptionData = data as STRIPE_SUB_CACHE
+		}
+	}
+
+	if (subscriptionData.status === "active") {
+		// This also blocks deleting an account if they cancel but haven't reached the end of their billing period yet
+		return { success: false as const, error: "You must cancel your subscription before deleting your account." }
 	}
 
 	await user.delete()

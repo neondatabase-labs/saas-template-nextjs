@@ -6,10 +6,8 @@ import { Label } from "@/components/ui/label"
 import {
 	AlertTriangle,
 	Users,
-	CreditCard,
 	Zap,
 	Package,
-	Check,
 	Mail,
 	Shield,
 	Eye,
@@ -43,9 +41,9 @@ import {
 	AlertDialogDescription,
 	AlertDialogFooter,
 	AlertDialogCancel,
-	AlertDialogAction,
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
+import { Card, CardTitle, CardHeader, CardDescription, CardFooter } from "@/components/ui/card"
 
 export function SettingsPageClient({
 	contactChannels: serverContactChannels,
@@ -66,7 +64,7 @@ export function SettingsPageClient({
 	const user = useUser({ or: "redirect" })
 	const formRef = useRef<HTMLFormElement>(null)
 	const [isPendingVerification, setIsPendingVerification] = useState<string[]>([])
-	const [avatarError, setAvatarError] = useState("")
+	const [profileError, setProfileError] = useState("")
 	const [passwordError, setPasswordError] = useState<string | null>(null)
 	const [deleteError, setDeleteError] = useState<string | null>(null)
 	const [showNewPassword, setShowNewPassword] = useState(false)
@@ -109,74 +107,71 @@ export function SettingsPageClient({
 
 	const isActive = subscriptionData.status === "active"
 	const isPro = subscriptionPlan === "PRO" && isActive
-
 	return (
 		<div>
 			{/* Profile Settings */}
-			<section>
-				<div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-					<div>
-						<h2 className="text-lg font-medium">Profile Picture</h2>
-						<p className="text-sm text-muted-foreground">
-							This will be displayed on your profile and across the platform.
-						</p>
-						<div className="mt-1">
-							<p className="text-sm text-destructive min-h-[1rem]">{avatarError}</p>
+			<section className="relative flex items-center gap-4">
+				<div>
+					<label className="cursor-pointer">
+						<div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-background bg-muted flex items-center justify-center">
+							{user.profileImageUrl ? (
+								<Image
+									src={user.profileImageUrl}
+									alt={user.displayName || "User avatar"}
+									className="object-cover"
+									fill
+								/>
+							) : (
+								<Users className="h-12 w-12 text-muted-foreground" />
+							)}
 						</div>
-					</div>
-
-					<div className="relative">
-						<label className="cursor-pointer">
-							<div className="relative h-24 w-24 overflow-hidden rounded-full border-4 border-background bg-muted flex items-center justify-center">
-								{user.profileImageUrl ? (
-									<Image
-										src={user.profileImageUrl}
-										alt={user.displayName || "User avatar"}
-										className="object-cover"
-										fill
-									/>
-								) : (
-									<Users className="h-12 w-12 text-muted-foreground" />
-								)}
-							</div>
-							<ImageInput
-								className="hidden"
-								maxBytes={100_000}
-								onChange={(dataUrl) => {
-									setAvatarError("")
-									user.update({ profileImageUrl: dataUrl })
-								}}
-								onError={(error) => setAvatarError(error)}
-							/>
-						</label>
-					</div>
+						<ImageInput
+							className="hidden"
+							maxBytes={100_000}
+							onChange={(dataUrl) => {
+								setProfileError("")
+								user.update({ profileImageUrl: dataUrl })
+							}}
+							onError={(error) => setProfileError(error)}
+						/>
+					</label>
 				</div>
 
 				<form
-					className="flex gap-2 items-end max-w-md"
 					onSubmit={(event) => {
 						event.preventDefault()
 
 						const form = event.target as HTMLFormElement
 						const displayName = form.displayName?.value
+						if (!displayName) {
+							// Backend supports users without display names, can choose to block them here
+							setProfileError("Display name is required")
+							return
+						}
+
 						user.update({ displayName })
 					}}
 				>
-					<div className="grow">
-						<Label htmlFor="displayName" className="text-sm">
-							Display Name
-						</Label>
-						<Input
-							id="displayName"
-							name="displayName"
-							defaultValue={user.displayName || ""}
-							placeholder="Enter your name"
-							className="mt-1"
-						/>
+					<div className="flex gap-2 items-end max-w-md">
+						<div className="grow">
+							<Label htmlFor="displayName" className="text-sm">
+								Display Name
+							</Label>
+							<Input
+								id="displayName"
+								name="displayName"
+								defaultValue={user.displayName || ""}
+								placeholder="Enter your name"
+								className="mt-1"
+								onBlur={() => setProfileError("")}
+							/>
+						</div>
+						<div className="flex justify-end">
+							<Button type="submit">Save</Button>
+						</div>
 					</div>
-
-					<div className="flex justify-end">
-						<Button type="submit">Save</Button>
+					<div className="mt-1">
+						<p className="text-sm text-destructive min-h-[20px]">{profileError}</p>
 					</div>
 				</form>
 			</section>
@@ -225,9 +220,7 @@ export function SettingsPageClient({
 					<div className="space-y-1">
 						<div className="flex items-center gap-2">
 							<h2 className="text-xl font-medium">Pro Plan</h2>
-							{isPro ? (
-								<Badge className="bg-primary/20 text-primary hover:bg-primary/30">Active</Badge>
-							) : null}
+							{isPro ? <Badge>Active</Badge> : null}
 						</div>
 						<p className="text-sm text-muted-foreground">Advanced features for power users</p>
 					</div>
@@ -267,14 +260,12 @@ export function SettingsPageClient({
 						{isPro ? (
 							<form action={createBillingPortalSession}>
 								<Button type="submit" className="gap-2">
-									<CreditCard className="h-4 w-4" />
 									Manage Subscription
 								</Button>
 							</form>
 						) : (
 							<form action={createCheckoutSession}>
 								<Button type="submit" className="gap-2">
-									<CreditCard className="h-4 w-4" />
 									Upgrade to Pro
 								</Button>
 							</form>
@@ -297,7 +288,7 @@ export function SettingsPageClient({
 
 				<div className="mt-4 space-y-4  max-w-md">
 					{contactChannels.map((channel) => (
-						<div key={channel.id} className="">
+						<div key={channel.id}>
 							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 								<div className="flex items-center gap-2">
 									<span className="font-medium">{channel.value}</span>
@@ -442,7 +433,7 @@ export function SettingsPageClient({
 										type="button"
 										variant="ghost"
 										size="sm"
-										className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+										className="absolute right-0 top-0 h-full"
 										onClick={() => setShowNewPassword(!showNewPassword)}
 									>
 										{showNewPassword ? (
@@ -464,7 +455,6 @@ export function SettingsPageClient({
 							</div>
 							<div className="flex justify-end">
 								<Button type="submit">
-									<Check className="h-4 w-4" />{" "}
 									{user.hasPassword ? "Update Password" : "Set Password"}
 								</Button>
 							</div>
@@ -474,6 +464,7 @@ export function SettingsPageClient({
 			</div>
 
 			<Separator className="my-6" />
+
 			{/* Danger Zone */}
 			<div>
 				<h2 className="text-lg font-medium flex items-center gap-2 text-destructive">
@@ -485,58 +476,65 @@ export function SettingsPageClient({
 				</p>
 
 				<div className="mt-6">
-					<div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
-						<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-							<div>
-								<h3 className="font-medium text-destructive">Delete Account</h3>
-								{isActive ? (
-									<p className="text-sm text-muted-foreground mt-1">
-										You must cancel your subscription before you can delete your account.
-									</p>
-								) : (
-									<p className="text-sm text-muted-foreground mt-1">
-										Once you delete your account, there is no going back. This action cannot be
-										undone.
-									</p>
-								)}
-							</div>
+					<Card className="flex-row">
+						<CardHeader className="grow">
+							<CardTitle>Delete Account</CardTitle>
+							{isActive ? (
+								<CardDescription>
+									You must cancel your subscription before you can delete your account.
+								</CardDescription>
+							) : (
+								<CardDescription>
+									Once you delete your account, there is no going back. This action cannot be
+									undone.
+								</CardDescription>
+							)}
+						</CardHeader>
 
-							<AlertDialog>
-								<AlertDialogTrigger asChild>
-									<Button variant="destructive" size="sm" className="gap-2" disabled={isActive}>
-										<Trash2 className="h-4 w-4" />
-										Delete Account
-									</Button>
-								</AlertDialogTrigger>
-								<AlertDialogContent>
-									<AlertDialogHeader>
-										<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-										<AlertDialogDescription>
-											This action cannot be undone. This will permanently delete your account and
-											remove all your data from our servers.
-										</AlertDialogDescription>
-									</AlertDialogHeader>
-									<AlertDialogFooter>
-										<AlertDialogCancel>Cancel</AlertDialogCancel>
-										<form
-											action={async (formData) => {
-												const result = await deleteAccount(formData)
-												setDeleteError(result.success ? null : result.error)
-											}}
-											className="space-y-4"
-										>
-											<AlertDialogAction
-												type="submit"
-												className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-											>
-												Delete
-											</AlertDialogAction>
-										</form>
-									</AlertDialogFooter>
-								</AlertDialogContent>
-							</AlertDialog>
-						</div>
-					</div>
+						{isActive ? null : (
+							<CardFooter>
+								<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+									<AlertDialog>
+										<AlertDialogTrigger asChild>
+											<Button variant="destructive" size="sm" className="gap-2">
+												<Trash2 className="h-4 w-4" />
+												Delete Account
+											</Button>
+										</AlertDialogTrigger>
+										<AlertDialogContent>
+											<AlertDialogHeader>
+												<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+												{deleteError ? (
+													<AlertDialogDescription className="text-destructive">
+														{deleteError}
+													</AlertDialogDescription>
+												) : (
+													<AlertDialogDescription>
+														This action cannot be undone. This will permanently delete your account
+														and remove all your data from our servers.
+													</AlertDialogDescription>
+												)}
+											</AlertDialogHeader>
+											<AlertDialogFooter>
+												<AlertDialogCancel>Cancel</AlertDialogCancel>
+												<form
+													action={async () => {
+														const result = await deleteAccount()
+														if (!result.success) {
+															setDeleteError(result.error)
+														}
+													}}
+												>
+													{/* Don't need to close the modal here because the action will redirect if successful */}
+													<Button type="submit">Delete</Button>
+												</form>
+											</AlertDialogFooter>
+										</AlertDialogContent>
+									</AlertDialog>
+								</div>
+							</CardFooter>
+						)}
+					</Card>
 				</div>
 			</div>
 		</div>
