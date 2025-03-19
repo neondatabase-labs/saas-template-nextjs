@@ -535,7 +535,7 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 						selectedProjectId={selectedProjectFilter}
 						onSelectProject={setSelectedProjectFilter}
 						onProjectAdded={handleProjectAdded}
-						triggerClassName="min-w-[150px]"
+						triggerClassName="min-w-[120px]"
 					/>
 
 					{selectedProjectFilter !== null && (
@@ -543,10 +543,10 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 							variant="ghost"
 							size="icon"
 							onClick={() => setSelectedProjectFilter(null)}
-							title="Show all projects"
+							title="Clear project filter"
 						>
-							<Layers className="h-4 w-4" />
-							<span className="sr-only">Show all projects</span>
+							<X className="h-4 w-4" />
+							<span className="sr-only">Clear project filter</span>
 						</Button>
 					)}
 				</div>
@@ -766,7 +766,6 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 												key={todo.id}
 												todo={todo}
 												projects={optimisticProjects}
-												onDelete={deleteOptimisticTodo}
 												selected={selectedTodoIds.has(todo.id)}
 												onSelectChange={toggleTodoSelection}
 												isPastDue={group.isPast && !todo.completed}
