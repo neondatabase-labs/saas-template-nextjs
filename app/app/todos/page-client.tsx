@@ -9,7 +9,6 @@ import {
 	deleteTodo,
 	bulkUpdateDueDate,
 	bulkUpdateProject,
-	bulkUpdateAssignedUser,
 	bulkToggleCompleted,
 } from "@/lib/actions"
 import { useFormStatus } from "react-dom"
@@ -24,7 +23,6 @@ import {
 	Clock,
 	Tag,
 	Layers,
-	User,
 	CheckCircle,
 	Circle,
 } from "lucide-react"
@@ -50,9 +48,6 @@ import {
 } from "@/components/ui/dialog"
 import { ProjectSelector } from "./project-selector"
 import { ProjectBadge } from "./project-badge"
-import { UserSelector } from "./user-selector"
-import { UserAvatar } from "./user-avatar"
-import type { User as UserType } from "@/lib/schema"
 
 // Form submit button with loading state
 function SubmitButton() {
@@ -176,18 +171,15 @@ function AddTodoForm({
 	onAddTodo,
 	onClose,
 	projects,
-	users,
 	onProjectAdded,
 }: {
 	onAddTodo: (todo: Todo) => void
 	onClose: () => void
 	projects: Project[]
-	users: UserType[]
 	onProjectAdded?: (project: Project) => void
 }) {
 	const [selectedDueDate, setSelectedDueDate] = useState<Date | undefined>(undefined)
 	const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
-	const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
 	const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 	const [todoText, setTodoText] = useState("")
 	const { pending } = useFormStatus()
@@ -207,11 +199,6 @@ function AddTodoForm({
 			formData.append("projectId", selectedProjectId.toString())
 		}
 
-		// Add assigned user ID to form data if selected
-		if (selectedUserId !== null) {
-			formData.append("assignedUserId", selectedUserId.toString())
-		}
-
 		// Create an optimistic todo with a temporary negative ID
 		const optimisticTodo: Todo = {
 			id: -Math.floor(Math.random() * 1000) - 1,
@@ -219,7 +206,7 @@ function AddTodoForm({
 			completed: false,
 			dueDate: selectedDueDate || null,
 			projectId: selectedProjectId,
-			assignedUserId: selectedUserId,
+			assignedUserId: null,
 		}
 
 		// Add optimistic todo to the UI
@@ -229,7 +216,6 @@ function AddTodoForm({
 		setTodoText("")
 		setSelectedDueDate(undefined)
 		setSelectedProjectId(null)
-		setSelectedUserId(null)
 		onClose()
 
 		// Send the actual request (non-blocking)
@@ -255,27 +241,15 @@ function AddTodoForm({
 				/>
 			</div>
 
-			<div className="grid grid-cols-2 gap-4">
-				<div className="space-y-2">
-					<label className="text-sm font-medium">Project</label>
-					<ProjectSelector
-						projects={projects}
-						selectedProjectId={selectedProjectId}
-						onSelectProject={setSelectedProjectId}
-						onProjectAdded={onProjectAdded}
-						triggerClassName="w-full justify-start"
-					/>
-				</div>
-
-				<div className="space-y-2">
-					<label className="text-sm font-medium">Assigned To</label>
-					<UserSelector
-						users={users}
-						selectedUserId={selectedUserId}
-						onSelectUser={setSelectedUserId}
-						triggerClassName="w-full justify-start"
-					/>
-				</div>
+			<div className="space-y-2">
+				<label className="text-sm font-medium">Project</label>
+				<ProjectSelector
+					projects={projects}
+					selectedProjectId={selectedProjectId}
+					onSelectProject={setSelectedProjectId}
+					onProjectAdded={onProjectAdded}
+					triggerClassName="w-full justify-start"
+				/>
 			</div>
 
 			<div className="space-y-2">
@@ -329,10 +303,9 @@ function AddTodoForm({
 interface TodoPageProps {
 	todos: Todo[]
 	projects: Project[]
-	users: UserType[]
 }
 
-export function TodoPage({ todos, projects, users }: TodoPageProps) {
+export function TodosPageClient({ todos, projects }: TodoPageProps) {
 	const [isPending, startTransition] = useTransition()
 	const [searchQuery, setSearchQuery] = useState("")
 	const [selectedTodoIds, setSelectedTodoIds] = useState<Set<number>>(new Set())
@@ -340,7 +313,6 @@ export function TodoPage({ todos, projects, users }: TodoPageProps) {
 	const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>(undefined)
 	const [isAddTodoOpen, setIsAddTodoOpen] = useState(false)
 	const [selectedProjectFilter, setSelectedProjectFilter] = useState<number | null>(null)
-	const [selectedUserFilter, setSelectedUserFilter] = useState<number | null>(null)
 	const [optimisticProjects, setOptimisticProjects] = useState<Project[]>(projects)
 
 	// Optimistic state management for todos list
@@ -354,7 +326,6 @@ export function TodoPage({ todos, projects, users }: TodoPageProps) {
 				| { type: "deleteMany"; ids: number[] }
 				| { type: "reschedule"; ids: number[]; dueDate: Date | null }
 				| { type: "moveToProject"; ids: number[]; projectId: number | null }
-				| { type: "assignToUser"; ids: number[]; userId: number | null }
 				| { type: "toggleCompleted"; ids: number[]; completed: boolean },
 		) => {
 			if (action.type === "add") {
@@ -377,13 +348,6 @@ export function TodoPage({ todos, projects, users }: TodoPageProps) {
 					}
 					return todo
 				})
-			} else if (action.type === "assignToUser") {
-				return state.map((todo) => {
-					if (action.ids.includes(todo.id)) {
-						return { ...todo, assignedUserId: action.userId }
-					}
-					return todo
-				})
 			} else if (action.type === "toggleCompleted") {
 				return state.map((todo) => {
 					if (action.ids.includes(todo.id)) {
@@ -396,13 +360,12 @@ export function TodoPage({ todos, projects, users }: TodoPageProps) {
 		},
 	)
 
-	// Filter todos based on search query, selected project, and selected user
+	// Filter todos based on search query and selected project
 	const filteredTodos = optimisticTodos.filter((todo) => {
 		const matchesSearch = todo.text.toLowerCase().includes(searchQuery.toLowerCase())
 		const matchesProject =
 			selectedProjectFilter === null || todo.projectId === selectedProjectFilter
-		const matchesUser = selectedUserFilter === null || todo.assignedUserId === selectedUserFilter
-		return matchesSearch && matchesProject && matchesUser
+		return matchesSearch && matchesProject
 	})
 
 	// Group filtered todos by due date
@@ -491,28 +454,6 @@ export function TodoPage({ todos, projects, users }: TodoPageProps) {
 		})
 	}
 
-	// Assign multiple todos to a user optimistically
-	function assignSelectedTodosToUser(userId: number | null) {
-		const idsToAssign = Array.from(selectedTodoIds)
-
-		if (idsToAssign.length === 0) return
-
-		startTransition(() => {
-			// Update optimistically
-			updateOptimisticTodos({
-				type: "assignToUser",
-				ids: idsToAssign,
-				userId,
-			})
-
-			// Clear selection
-			setSelectedTodoIds(new Set())
-
-			// Send the actual request
-			bulkUpdateAssignedUser(idsToAssign, userId)
-		})
-	}
-
 	// Mark multiple todos as completed/uncompleted optimistically
 	function toggleSelectedTodosCompleted(completed: boolean) {
 		const idsToToggle = Array.from(selectedTodoIds)
@@ -579,10 +520,6 @@ export function TodoPage({ todos, projects, users }: TodoPageProps) {
 			? optimisticProjects.find((p) => p.id === selectedProjectFilter)
 			: null
 
-	// Find the selected user for display
-	const selectedUser =
-		selectedUserFilter !== null ? users.find((u) => u.id === selectedUserFilter) : null
-
 	return (
 		<div className="space-y-6">
 			{/* Header */}
@@ -593,11 +530,6 @@ export function TodoPage({ todos, projects, users }: TodoPageProps) {
 						<div className="flex items-center gap-2">
 							<span className="text-muted-foreground">in</span>
 							<ProjectBadge project={selectedProject} />
-						</div>
-					)}
-					{selectedUser && (
-						<div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted">
-							<UserAvatar user={selectedUser} showName />
 						</div>
 					)}
 				</div>
@@ -649,27 +581,6 @@ export function TodoPage({ todos, projects, users }: TodoPageProps) {
 					)}
 				</div>
 
-				<div className="flex gap-2">
-					<UserSelector
-						users={users}
-						selectedUserId={selectedUserFilter}
-						onSelectUser={setSelectedUserFilter}
-						triggerClassName="min-w-[150px]"
-					/>
-
-					{selectedUserFilter !== null && (
-						<Button
-							variant="ghost"
-							size="icon"
-							onClick={() => setSelectedUserFilter(null)}
-							title="Show all users"
-						>
-							<Layers className="h-4 w-4" />
-							<span className="sr-only">Show all users</span>
-						</Button>
-					)}
-				</div>
-
 				<Dialog open={isAddTodoOpen} onOpenChange={setIsAddTodoOpen}>
 					<DialogTrigger asChild>
 						<Button>
@@ -685,7 +596,6 @@ export function TodoPage({ todos, projects, users }: TodoPageProps) {
 							onAddTodo={addOptimisticTodo}
 							onClose={() => setIsAddTodoOpen(false)}
 							projects={optimisticProjects}
-							users={users}
 							onProjectAdded={handleProjectAdded}
 						/>
 					</DialogContent>
@@ -733,38 +643,6 @@ export function TodoPage({ todos, projects, users }: TodoPageProps) {
 									<Circle className="h-4 w-4 mr-1" />
 									Mark Incomplete
 								</Button>
-
-								<Popover>
-									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={isPending}
-											className="flex items-center gap-1"
-										>
-											<User className="h-4 w-4 mr-1" />
-											Assign To
-										</Button>
-									</PopoverTrigger>
-									<PopoverContent className="w-auto p-0" align="end">
-										<div className="p-2 border-b">
-											<h3 className="text-sm font-medium">
-												Assign {selectedCount} item
-												{selectedCount !== 1 ? "s" : ""} to User
-											</h3>
-										</div>
-										<div className="p-2">
-											<UserSelector
-												users={users}
-												selectedUserId={null}
-												onSelectUser={(userId) => {
-													assignSelectedTodosToUser(userId)
-												}}
-												triggerClassName="w-full justify-start"
-											/>
-										</div>
-									</PopoverContent>
-								</Popover>
 
 								<Popover>
 									<PopoverTrigger asChild>
@@ -896,18 +774,13 @@ export function TodoPage({ todos, projects, users }: TodoPageProps) {
 				</div>
 
 				{/* Todo Groups */}
-				{filteredTodos.length === 0 &&
-				!searchQuery &&
-				!selectedProjectFilter &&
-				!selectedUserFilter ? (
+				{filteredTodos.length === 0 && !searchQuery && !selectedProjectFilter ? (
 					<p className="text-center text-muted-foreground py-4">No todos yet. Add one above!</p>
 				) : filteredTodos.length === 0 ? (
 					<p className="text-center text-muted-foreground py-4">
 						{selectedProjectFilter !== null
 							? "No todos in this project"
-							: selectedUserFilter !== null
-								? "No todos assigned to this user"
-								: "No todos match your search"}
+							: "No todos match your search"}
 					</p>
 				) : (
 					<div>
@@ -945,7 +818,6 @@ export function TodoPage({ todos, projects, users }: TodoPageProps) {
 												key={todo.id}
 												todo={todo}
 												projects={optimisticProjects}
-												users={users}
 												onDelete={deleteOptimisticTodo}
 												selected={selectedTodoIds.has(todo.id)}
 												onSelectChange={toggleTodoSelection}

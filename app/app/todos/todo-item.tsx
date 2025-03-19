@@ -3,30 +3,17 @@
 import { useOptimistic, useTransition, useState } from "react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from "@/components/ui/button"
-import {
-	MoreHorizontal,
-	Trash,
-	Calendar,
-	CheckCircle,
-	Circle,
-	AlertCircle,
-	Tag,
-	User,
-} from "lucide-react"
-import { toggleTodo, updateDueDate, updateTodoProject, updateAssignedUser } from "@/lib/actions"
+import { MoreHorizontal, Trash, Calendar, CheckCircle, Circle, Tag } from "lucide-react"
+import { toggleTodo, updateDueDate, updateTodoProject } from "@/lib/actions"
 import type { Todo, Project } from "@/lib/schema"
-import type { User as UserType } from "@/lib/schema"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { ProjectBadge } from "./project-badge"
 import { ProjectSelector } from "./project-selector"
-import { UserAvatar } from "./user-avatar"
-import { UserSelector } from "./user-selector"
 
 export function TodoItem({
 	todo,
 	projects,
-	users,
 	onDelete,
 	selected,
 	onSelectChange,
@@ -35,7 +22,6 @@ export function TodoItem({
 }: {
 	todo: Todo
 	projects: Project[]
-	users: UserType[]
 	onDelete: (id: number) => void
 	selected: boolean
 	onSelectChange: (id: number, selected: boolean) => void
@@ -45,7 +31,6 @@ export function TodoItem({
 	const [isPending, startTransition] = useTransition()
 	const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 	const [isProjectSelectorOpen, setIsProjectSelectorOpen] = useState(false)
-	const [isUserSelectorOpen, setIsUserSelectorOpen] = useState(false)
 
 	// Optimistic UI for toggle
 	const [optimisticTodo, updateOptimisticTodo] = useOptimistic(
@@ -62,11 +47,6 @@ export function TodoItem({
 	// Find the project for this todo
 	const todoProject = optimisticTodo.projectId
 		? projects.find((p) => p.id === optimisticTodo.projectId)
-		: null
-
-	// Find the assigned user for this todo
-	const assignedUser = optimisticTodo.assignedUserId
-		? users.find((u) => u.id === optimisticTodo.assignedUserId)
 		: null
 
 	const handleToggle = () => {
@@ -89,105 +69,131 @@ export function TodoItem({
 		onSelectChange(optimisticTodo.id, checked)
 	}
 
-	const handleDateChange = (date: Date | undefined) => {
-		setIsCalendarOpen(false)
-
-		if (isOptimistic) return // Don't allow updating optimistic todos
+	const handleDueDateChange = (date: Date | null) => {
+		if (isOptimistic) return
 
 		startTransition(() => {
-			// Update optimistically
-			updateOptimisticTodo({ dueDate: date || null })
-			// Send the actual request
-			updateDueDate(optimisticTodo.id, date || null)
+			// First update optimistically
+			updateOptimisticTodo({ dueDate: date })
+			// Close the calendar
+			setIsCalendarOpen(false)
+			// Then send the actual request
+			updateDueDate(optimisticTodo.id, date)
 		})
 	}
 
 	const handleProjectChange = (projectId: number | null) => {
-		if (isOptimistic) return // Don't allow updating optimistic todos
+		if (isOptimistic) return
 
 		startTransition(() => {
-			// Update optimistically
+			// First update optimistically
 			updateOptimisticTodo({ projectId })
-			// Send the actual request
+			// Close the project selector
+			setIsProjectSelectorOpen(false)
+			// Then send the actual request
 			updateTodoProject(optimisticTodo.id, projectId)
 		})
 	}
 
-	const handleUserChange = (userId: number | null) => {
-		if (isOptimistic) return // Don't allow updating optimistic todos
-
-		startTransition(() => {
-			// Update optimistically
-			updateOptimisticTodo({ assignedUserId: userId })
-			// Send the actual request
-			updateAssignedUser(optimisticTodo.id, userId)
-		})
-	}
-
-	// Only show past due styling if the item is not completed
+	// Add specific class for past due todos
 	const showPastDue = isPastDue && !optimisticTodo.completed
 
 	return (
 		<div
-			className={`flex items-center justify-between p-3 hover:bg-muted/50
-      ${isOptimistic ? "opacity-70" : ""}
-      ${selected ? "bg-muted/30" : ""}
-      ${showPastDue ? "bg-red-50/50 dark:bg-red-950/20" : ""}`}
+			className={`flex items-start p-3 gap-3 ${
+				optimisticTodo.completed ? "bg-muted/30" : ""
+			} hover:bg-muted/20 relative`}
 		>
-			<div className="flex items-center gap-3 flex-1">
-				{showPastDue ? <AlertCircle className="h-4 w-4 text-red-500" /> : null}
-
-				{/* Selection checkbox */}
+			<div className="flex items-center h-5 pt-0.5">
 				<Checkbox
-					id={`select-${optimisticTodo.id}`}
-					checked={selected}
-					onCheckedChange={handleSelect}
+					id={`todo-${optimisticTodo.id}`}
+					checked={optimisticTodo.completed}
+					onCheckedChange={handleToggle}
 					disabled={isPending || isOptimistic}
-					className="translate-y-[1px]"
+					className="data-[state=checked]:bg-green-600 data-[state=checked]:text-white data-[state=checked]:border-green-600"
 				/>
+			</div>
 
-				<div className="flex flex-col min-w-0 gap-1">
-					<div className="flex items-center gap-2">
-						<span
-							className={`text-sm font-medium leading-none truncate 
-                ${optimisticTodo.completed ? "line-through text-muted-foreground" : ""}
-                ${showPastDue ? "text-red-600 dark:text-red-400" : ""}`}
-						>
-							{optimisticTodo.text}
-						</span>
+			<div className="flex-1 min-w-0">
+				<div className="flex items-start justify-between gap-2">
+					<label
+						htmlFor={`todo-${optimisticTodo.id}`}
+						className={`text-sm flex-1 ${
+							optimisticTodo.completed ? "line-through text-muted-foreground" : ""
+						} ${showPastDue ? "text-red-600 dark:text-red-400" : ""}`}
+					>
+						{optimisticTodo.text}
+					</label>
 
-						<Popover open={isUserSelectorOpen} onOpenChange={setIsUserSelectorOpen}>
+					<div className="flex items-center gap-2 whitespace-nowrap">
+						<Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
 							<PopoverTrigger asChild>
-								{assignedUser ? (
-									<Button
-										variant="ghost"
-										size="icon"
-										className="h-6 w-6 p-0 rounded-full ml-1"
-										disabled={isPending || isOptimistic}
-									>
-										<UserAvatar user={assignedUser} className="cursor-pointer" />
-									</Button>
-								) : (
-									<Button
-										variant="ghost"
-										size="sm"
-										className="h-6 px-2 rounded-full text-xs text-muted-foreground ml-1"
-										disabled={isPending || isOptimistic}
-									>
-										<User className="h-3 w-3 mr-1" />
-										<span>Assign</span>
-									</Button>
-								)}
+								<Button
+									variant="ghost"
+									size="sm"
+									className="h-6 px-2 rounded-full text-xs text-muted-foreground"
+									disabled={isPending || isOptimistic}
+								>
+									<Calendar className="h-3 w-3 mr-1" />
+									{optimisticTodo.dueDate ? (
+										<span>
+											{new Date(optimisticTodo.dueDate).toLocaleDateString("en-US", {
+												month: "short",
+												day: "numeric",
+											})}
+										</span>
+									) : (
+										<span>Due date</span>
+									)}
+								</Button>
 							</PopoverTrigger>
 							<PopoverContent className="w-auto p-0" align="end">
 								<div className="p-2 border-b">
-									<h3 className="text-sm font-medium">Assign to User</h3>
+									<h3 className="text-sm font-medium">Set Due Date</h3>
+								</div>
+								<div className="p-0">
+									<CalendarComponent
+										mode="single"
+										selected={optimisticTodo.dueDate ? new Date(optimisticTodo.dueDate) : undefined}
+										onSelect={handleDueDateChange}
+										initialFocus
+									/>
+								</div>
+								<div className="p-2 border-t">
+									<Button
+										variant="ghost"
+										size="sm"
+										className="w-full"
+										onClick={() => handleDueDateChange(null)}
+									>
+										Clear due date
+									</Button>
+								</div>
+							</PopoverContent>
+						</Popover>
+
+						<Popover open={isProjectSelectorOpen} onOpenChange={setIsProjectSelectorOpen}>
+							<PopoverTrigger asChild>
+								<Button
+									variant="ghost"
+									size="sm"
+									className="h-6 px-2 rounded-full text-xs text-muted-foreground"
+									disabled={isPending || isOptimistic}
+								>
+									<Tag className="h-3 w-3 mr-1" />
+									<span>Project</span>
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent className="w-auto p-0" align="end">
+								<div className="p-2 border-b">
+									<h3 className="text-sm font-medium">Set Project</h3>
 								</div>
 								<div className="p-2">
-									<UserSelector
-										users={users}
-										selectedUserId={optimisticTodo.assignedUserId}
-										onSelectUser={handleUserChange}
+									<ProjectSelector
+										projects={projects}
+										selectedProjectId={optimisticTodo.projectId}
+										onSelectProject={handleProjectChange}
+										onProjectAdded={onProjectAdded}
 										triggerClassName="w-full justify-start"
 									/>
 								</div>
@@ -214,90 +220,51 @@ export function TodoItem({
 					</div>
 				</div>
 			</div>
-			<div className="flex items-center gap-2">
-				{/* Complete/Uncomplete button */}
-				<Button
-					variant="ghost"
-					size="icon"
-					className={`h-8 w-8 ${optimisticTodo.completed ? "text-green-600" : showPastDue ? "text-red-500" : ""}`}
-					onClick={handleToggle}
-					disabled={isPending || isOptimistic}
-				>
-					{optimisticTodo.completed ? (
-						<CheckCircle className="h-4 w-4" />
-					) : (
-						<Circle className="h-4 w-4" />
-					)}
-					<span className="sr-only">
-						{optimisticTodo.completed ? "Mark as incomplete" : "Mark as complete"}
-					</span>
-				</Button>
 
-				<Popover open={isProjectSelectorOpen} onOpenChange={setIsProjectSelectorOpen}>
+			<div className="flex items-start">
+				<Checkbox
+					checked={selected}
+					onCheckedChange={handleSelect}
+					disabled={isOptimistic}
+					className="data-[state=checked]:bg-primary data-[state=checked]:text-white"
+				/>
+
+				<Popover>
 					<PopoverTrigger asChild>
-						<Button
-							variant="ghost"
-							size="icon"
-							className="h-8 w-8"
-							disabled={isPending || isOptimistic}
-						>
-							<Tag className="h-4 w-4" />
-							<span className="sr-only">Set project</span>
+						<Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+							<MoreHorizontal className="h-4 w-4" />
 						</Button>
 					</PopoverTrigger>
-					<PopoverContent className="w-auto p-0" align="end">
-						<div className="p-2 border-b">
-							<h3 className="text-sm font-medium">Assign to Project</h3>
-						</div>
-						<div className="p-2">
-							<ProjectSelector
-								projects={projects}
-								selectedProjectId={optimisticTodo.projectId}
-								onSelectProject={handleProjectChange}
-								onProjectAdded={onProjectAdded}
-								triggerClassName="w-full justify-start"
-							/>
+					<PopoverContent side="left" align="start" className="w-[180px]">
+						<div className="grid gap-1">
+							<Button
+								variant="ghost"
+								className="flex items-center justify-start text-sm h-8"
+								onClick={handleToggle}
+							>
+								{optimisticTodo.completed ? (
+									<>
+										<Circle className="mr-2 h-4 w-4" />
+										Mark incomplete
+									</>
+								) : (
+									<>
+										<CheckCircle className="mr-2 h-4 w-4" />
+										Mark complete
+									</>
+								)}
+							</Button>
+							<Button
+								variant="ghost"
+								className="flex items-center justify-start text-sm text-red-600 h-8"
+								onClick={handleDelete}
+							>
+								<Trash className="mr-2 h-4 w-4" />
+								Delete
+							</Button>
 						</div>
 					</PopoverContent>
 				</Popover>
-
-				<Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-					<PopoverTrigger asChild>
-						<Button
-							variant="ghost"
-							size="icon"
-							className="h-8 w-8"
-							disabled={isPending || isOptimistic}
-						>
-							<Calendar className="h-4 w-4" />
-							<span className="sr-only">Set due date</span>
-						</Button>
-					</PopoverTrigger>
-					<PopoverContent className="w-auto p-0" align="end">
-						<CalendarComponent
-							mode="single"
-							selected={optimisticTodo.dueDate ? new Date(optimisticTodo.dueDate) : undefined}
-							onSelect={handleDateChange}
-							initialFocus
-						/>
-					</PopoverContent>
-				</Popover>
-
-				<Button
-					variant="ghost"
-					size="icon"
-					className="h-8 w-8"
-					onClick={handleDelete}
-					disabled={isPending || isOptimistic}
-				>
-					<Trash className="h-4 w-4" />
-					<span className="sr-only">Delete</span>
-				</Button>
-
-				<Button variant="ghost" size="icon" className="h-8 w-8">
-					<MoreHorizontal className="h-4 w-4" />
-					<span className="sr-only">More</span>
-				</Button>
 			</div>
 		</div>
 	)
