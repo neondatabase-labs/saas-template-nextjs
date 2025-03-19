@@ -1,20 +1,21 @@
 "use client"
-import { useOptimistic, useTransition, useState } from "react"
+import { useOptimistic, useTransition, useState, startTransition } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { TodoItem } from "./todo-item"
 import {
 	addTodo,
 	deleteTodo,
 	bulkUpdateDueDate,
 	bulkUpdateProject,
 	bulkToggleCompleted,
+	updateDueDate,
+	updateTodoProject,
 } from "@/lib/actions"
-import { Search, Plus, Trash, X, Calendar, AlertCircle, Clock, Tag, Layers } from "lucide-react"
+import { Search, Plus, Trash, X, AlertCircle, Clock, Tag, CalendarIcon } from "lucide-react"
 import type { Todo, Project } from "@/lib/schema"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Calendar } from "@/components/ui/calendar"
 import {
 	format,
 	isToday,
@@ -34,7 +35,7 @@ import {
 } from "@/components/ui/dialog"
 import { ProjectSelector } from "./project-selector"
 import { ProjectBadge } from "./project-badge"
-
+import { Badge } from "@/components/ui/badge"
 // Form submit button
 function SubmitButton() {
 	return (
@@ -167,6 +168,8 @@ function AddTodoForm({
 	const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 	const [todoText, setTodoText] = useState("")
 
+	const selectedProject = projects.find((p) => p.id === selectedProjectId)
+
 	async function handleAction(formData: FormData) {
 		const text = formData.get("text") as string
 
@@ -223,33 +226,35 @@ function AddTodoForm({
 				/>
 			</div>
 
-			<div className="space-y-2">
-				<label className="text-sm font-medium">Project</label>
+			<div className="flex items-center gap-2">
 				<ProjectSelector
 					projects={projects}
 					selectedProjectId={selectedProjectId}
 					onSelectProject={setSelectedProjectId}
 					onProjectAdded={onProjectAdded}
-					triggerClassName="w-full justify-start"
-				/>
-			</div>
+				>
+					{selectedProject ? (
+						<button type="button">
+							<ProjectBadge project={selectedProject} className="mr-2" />
+						</button>
+					) : (
+						<Button type="button" variant="outline" size="xs">
+							<Tag className="h-3 w-3 mr-1" />
+							<span>Project</span>
+						</Button>
+					)}
+				</ProjectSelector>
 
-			<div className="space-y-2">
-				<label className="text-sm font-medium">Due Date</label>
 				<div className="flex items-center gap-2">
 					<Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
 						<PopoverTrigger asChild>
-							<Button
-								type="button"
-								variant="outline"
-								className="w-full justify-start text-left font-normal"
-							>
-								<Calendar className="h-4 w-4 mr-2" />
+							<Button type="button" variant="outline" size="xs">
+								<CalendarIcon className="h-4 w-4 mr-2" />
 								{selectedDueDate ? format(selectedDueDate, "PPP") : "Select a date"}
 							</Button>
 						</PopoverTrigger>
 						<PopoverContent className="w-auto p-0" align="start">
-							<CalendarComponent
+							<Calendar
 								mode="single"
 								selected={selectedDueDate}
 								onSelect={(date) => {
@@ -281,13 +286,8 @@ function AddTodoForm({
 	)
 }
 
-interface TodoPageProps {
-	todos: Todo[]
-	projects: Project[]
-}
-
 export function TodosPageClient({ todos, projects }: TodoPageProps) {
-	const [isPending, startTransition] = useTransition()
+	const [, startTransition] = useTransition()
 	const [searchQuery, setSearchQuery] = useState("")
 	const [selectedTodoIds, setSelectedTodoIds] = useState<Set<number>>(new Set())
 	const [isRescheduleCalendarOpen, setIsRescheduleCalendarOpen] = useState(false)
@@ -352,9 +352,7 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 	// Group filtered todos by due date
 	const todoGroups = groupTodosByDueDate(filteredTodos)
 
-	// Count completed and total todos
-	const completedCount = optimisticTodos.filter((todo) => todo.completed).length
-	const totalCount = optimisticTodos.length
+	// Count of selected todos
 	const selectedCount = selectedTodoIds.size
 
 	// Add a new todo optimistically
@@ -362,16 +360,6 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 		startTransition(() => {
 			// Add to local state
 			updateOptimisticTodos({ type: "add", todo })
-		})
-	}
-
-	// Delete a todo optimistically
-	function deleteOptimisticTodo(id: number) {
-		startTransition(() => {
-			// Update local state first
-			updateOptimisticTodos({ type: "delete", id })
-			// Then send the actual request
-			deleteTodo(id)
 		})
 	}
 
@@ -503,10 +491,9 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 
 	return (
 		<div className="space-y-6">
-			{/* Header */}
 			<div className="flex justify-between items-center">
 				<div className="flex items-center gap-3">
-					<h1 className="text-2xl font-semibold">Active Todos</h1>
+					<h1 className="text-2xl font-semibold">Deadlines</h1>
 					{selectedProject && (
 						<div className="flex items-center gap-2">
 							<span className="text-muted-foreground">in</span>
@@ -517,15 +504,15 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 			</div>
 
 			{/* Search, Filter, and Add */}
-			<div className="flex flex-wrap gap-4">
+			<div className="flex flex-wrap gap-4 items-center">
 				<div className="relative flex-1 min-w-[200px]">
-					<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+					<Search className="-mt-[0.125rem] absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 					<Input
 						type="text"
 						placeholder="Search todos..."
 						value={searchQuery}
 						onChange={(e) => setSearchQuery(e.target.value)}
-						className="pl-9"
+						className="pl-8 h-8"
 					/>
 				</div>
 
@@ -535,33 +522,30 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 						selectedProjectId={selectedProjectFilter}
 						onSelectProject={setSelectedProjectFilter}
 						onProjectAdded={handleProjectAdded}
-						triggerClassName="min-w-[120px]"
-					/>
-
-					{selectedProjectFilter !== null && (
-						<Button
-							variant="ghost"
-							size="icon"
-							onClick={() => setSelectedProjectFilter(null)}
-							title="Clear project filter"
-						>
-							<X className="h-4 w-4" />
-							<span className="sr-only">Clear project filter</span>
-						</Button>
-					)}
+					>
+						{selectedProject ? (
+							<Button variant="outline" size="sm">
+								<Tag className="h-3 w-3" />
+								<span>{selectedProject.name}</span>
+							</Button>
+						) : (
+							<Button variant="outline" size="sm">
+								<Tag className="h-3 w-3 " />
+								<span>Project</span>
+							</Button>
+						)}
+					</ProjectSelector>
 				</div>
 
-				<Dialog open={isAddTodoOpen} onOpenChange={setIsAddTodoOpen}>
+				<Dialog modal open={isAddTodoOpen} onOpenChange={setIsAddTodoOpen}>
 					<DialogTrigger asChild>
-						<Button>
-							<Plus className="h-4 w-4 mr-2" />
-							Add Todo
-						</Button>
+						<Button size="sm">New deadline</Button>
 					</DialogTrigger>
 					<DialogContent>
 						<DialogHeader>
 							<DialogTitle>Add New Todo</DialogTitle>
 						</DialogHeader>
+
 						<AddTodoForm
 							onAddTodo={addOptimisticTodo}
 							onClose={() => setIsAddTodoOpen(false)}
@@ -611,33 +595,20 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 									</Button>
 								)}
 
-								<Popover>
-									<PopoverTrigger asChild>
-										<Button variant="outline" size="sm" className="flex items-center gap-1">
-											<Tag className="h-4 w-4 mr-1" />
-											Move to Project
-										</Button>
-									</PopoverTrigger>
-									<PopoverContent className="w-auto p-0" align="end">
-										<div className="p-2 border-b">
-											<h3 className="text-sm font-medium">
-												Move {selectedCount} item
-												{selectedCount !== 1 ? "s" : ""} to Project
-											</h3>
-										</div>
-										<div className="p-2">
-											<ProjectSelector
-												projects={optimisticProjects}
-												selectedProjectId={null}
-												onSelectProject={(projectId) => {
-													moveSelectedTodosToProject(projectId)
-												}}
-												onProjectAdded={handleProjectAdded}
-												triggerClassName="w-full justify-start"
-											/>
-										</div>
-									</PopoverContent>
-								</Popover>
+								<ProjectSelector
+									projects={optimisticProjects}
+									selectedProjectId={null}
+									onSelectProject={(projectId) => {
+										moveSelectedTodosToProject(projectId)
+									}}
+									onProjectAdded={handleProjectAdded}
+									asChild
+								>
+									<Button variant="outline" size="sm">
+										<Tag className="h-3 w-3 mr-1" />
+										<span>Project</span>
+									</Button>
+								</ProjectSelector>
 
 								<Popover open={isRescheduleCalendarOpen} onOpenChange={setIsRescheduleCalendarOpen}>
 									<PopoverTrigger asChild>
@@ -653,7 +624,7 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 												{selectedCount !== 1 ? "s" : ""}
 											</h3>
 										</div>
-										<CalendarComponent
+										<Calendar
 											mode="single"
 											selected={rescheduleDate}
 											onSelect={(date) => {
@@ -731,19 +702,19 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 							: "No todos match your search"}
 					</p>
 				) : (
-					<div>
+					<div className="grid grid-cols-[1fr_auto_auto_auto]">
 						{todoGroups.map((group) => (
-							<div key={group.label}>
+							<div key={group.label} className="col-span-4 grid grid-cols-subgrid">
 								{/* Date Header */}
 								<div
-									className={`px-3 py-2 border-t ${group.isPast ? "bg-red-50 dark:bg-red-950" : "bg-muted/30"}`}
+									className={`col-span-4 px-3 py-2 border-t ${group.isPast ? "bg-red-50 dark:bg-red-950" : "bg-muted/30"}`}
 								>
 									<div className="flex items-center justify-between">
 										<div className="flex items-center gap-2">
 											{group.isPast ? (
 												<AlertCircle className="h-4 w-4 text-red-500" />
 											) : (
-												<Calendar className="h-4 w-4 text-muted-foreground" />
+												<CalendarIcon className="h-4 w-4 text-muted-foreground" />
 											)}
 											<h3
 												className={`text-sm font-medium ${group.isPast ? "text-red-600 dark:text-red-400" : ""}`}
@@ -760,18 +731,101 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 
 								{/* Todos in this group or empty state */}
 								{group.todos.length > 0 ? (
-									<div className="divide-y">
-										{group.todos.map((todo) => (
-											<TodoItem
-												key={todo.id}
-												todo={todo}
-												projects={optimisticProjects}
-												selected={selectedTodoIds.has(todo.id)}
-												onSelectChange={toggleTodoSelection}
-												isPastDue={group.isPast && !todo.completed}
-												onProjectAdded={handleProjectAdded}
-											/>
-										))}
+									<div className="contents">
+										{group.todos.map((todo) => {
+											const showPastDue = group.isPast && !todo.completed
+											const project = optimisticProjects.find((p) => p.id === todo.projectId)
+											return (
+												<div
+													key={todo.id}
+													className={`grid grid-cols-subgrid col-span-4 px-2 py-1.5 gap-4 ${
+														todo.completed ? "bg-muted/30" : ""
+													} hover:bg-muted/20 relative group border-b`}
+												>
+													<div className="flex items-center gap-2">
+														<div className="flex items-center h-5 pt-0.5">
+															<Checkbox
+																checked={selectedTodoIds.has(todo.id)}
+																onCheckedChange={(checked: boolean) => {
+																	toggleTodoSelection(todo.id, checked)
+																}}
+																className="data-[state=checked]:bg-blue-600 data-[state=checked]:text-white data-[state=checked]:border-blue-600"
+																aria-label="Select todo for bulk actions"
+															/>
+														</div>
+
+														<div className="min-w-0">
+															<span
+																className={`text-sm block truncate ${
+																	todo.completed ? "line-through text-muted-foreground" : ""
+																} ${showPastDue ? "text-red-600 dark:text-red-400" : ""}`}
+															>
+																{todo.text}
+															</span>
+														</div>
+													</div>
+
+													{todo.completed ? (
+														<Badge
+															variant="outline"
+															className=" bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+														>
+															Done
+														</Badge>
+													) : showPastDue ? (
+														<Badge
+															variant="outline"
+															className=" bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
+														>
+															Overdue
+														</Badge>
+													) : (
+														<span />
+													)}
+
+													<div className="flex items-center">
+														<TodoDueDateButton
+															todo={todo}
+															updateOptimisticTodos={updateOptimisticTodos}
+														/>
+													</div>
+
+													<div className="flex items-center gap-2 justify-end">
+														<ProjectSelector
+															projects={optimisticProjects}
+															selectedProjectId={todo.projectId}
+															onSelectProject={(projectId: number | null) => {
+																startTransition(() => {
+																	// First update optimistically
+																	updateOptimisticTodos({
+																		type: "moveToProject",
+																		ids: [todo.id],
+																		projectId,
+																	})
+																	// Then send the actual request
+																	updateTodoProject(todo.id, projectId)
+																})
+															}}
+															onProjectAdded={handleProjectAdded}
+														>
+															{project ? (
+																<button>
+																	<ProjectBadge project={project} className="mr-2" />
+																</button>
+															) : (
+																<Button
+																	variant="outline"
+																	className="h-6 px-2 text-xs text-muted-foreground"
+																>
+																	<Tag className="h-3 w-3 mr-1" />
+																	<span>Project</span>
+																</Button>
+															)}
+														</ProjectSelector>
+													</div>
+												</div>
+											)
+										})}
 									</div>
 								) : (
 									<div className="py-3 px-4 text-center text-sm text-muted-foreground italic">
@@ -787,4 +841,90 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 			</div>
 		</div>
 	)
+}
+
+// Helper component for the Todo's due date button and popover
+function TodoDueDateButton({
+	todo,
+	updateOptimisticTodos,
+}: {
+	todo: Todo
+	updateOptimisticTodos: (action: {
+		type: "reschedule"
+		ids: number[]
+		dueDate: Date | null
+	}) => void
+}) {
+	const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+
+	return (
+		<Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+			<PopoverTrigger asChild>
+				<Button variant="outline" className="h-6 px-2 text-xs text-muted-foreground">
+					<CalendarIcon className="h-3 w-3 mr-1" />
+					{todo.dueDate ? (
+						<span>
+							{new Date(todo.dueDate).toLocaleDateString("en-US", {
+								month: "short",
+								day: "numeric",
+							})}
+						</span>
+					) : (
+						<span>Due date</span>
+					)}
+				</Button>
+			</PopoverTrigger>
+			<PopoverContent className="w-auto p-0" align="end">
+				<div className="p-2 border-b">
+					<h3 className="text-sm font-medium">Set Due Date</h3>
+				</div>
+				<div className="p-0">
+					<Calendar
+						mode="single"
+						selected={todo.dueDate ? new Date(todo.dueDate) : undefined}
+						onSelect={(date: Date | undefined) => {
+							startTransition(() => {
+								// First update optimistically
+								updateOptimisticTodos({
+									type: "reschedule",
+									ids: [todo.id],
+									dueDate: date || null,
+								})
+								// Close the calendar
+								setIsCalendarOpen(false)
+								// Then send the actual request
+								updateDueDate(todo.id, date || null)
+							})
+						}}
+						initialFocus
+					/>
+				</div>
+				<div className="p-2 border-t">
+					<Button
+						variant="ghost"
+						size="sm"
+						className="w-full"
+						onClick={() => {
+							startTransition(() => {
+								updateOptimisticTodos({
+									type: "reschedule",
+									ids: [todo.id],
+									dueDate: null,
+								})
+								updateDueDate(todo.id, null)
+								setIsCalendarOpen(false)
+							})
+						}}
+					>
+						Clear due date
+					</Button>
+				</div>
+			</PopoverContent>
+		</Popover>
+	)
+}
+
+interface TodoPageProps {
+	todos: Todo[]
+	projects: Project[]
 }

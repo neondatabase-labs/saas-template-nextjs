@@ -1,10 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { ComponentProps, useState } from "react"
 import { Check, Plus, Tag } from "lucide-react"
 import type { Project } from "@/lib/schema"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+	CommandSeparator,
+} from "@/components/ui/command"
 import { ProjectBadge } from "./project-badge"
 import {
 	Dialog,
@@ -17,29 +26,22 @@ import { Input } from "@/components/ui/input"
 import { addProject } from "@/lib/actions"
 import { cn } from "@/lib/utils"
 
-function SubmitButton() {
-	return <Button type="submit">Create Project</Button>
-}
-
 export function ProjectSelector({
 	projects,
 	selectedProjectId,
 	onSelectProject,
 	onProjectAdded,
-	triggerClassName,
+	...props
 }: {
 	projects: Project[]
 	selectedProjectId: number | null
 	onSelectProject: (projectId: number | null) => void
 	onProjectAdded?: (project: Project) => void
-	triggerClassName?: string
-}) {
+} & ComponentProps<typeof PopoverTrigger>) {
 	const [open, setOpen] = useState(false)
 	const [isAddProjectOpen, setIsAddProjectOpen] = useState(false)
 	const [projectName, setProjectName] = useState("")
 	const [projectColor, setProjectColor] = useState("#4f46e5") // Default indigo
-
-	const selectedProject = projects.find((p) => p.id === selectedProjectId)
 
 	// Predefined colors
 	const colors = [
@@ -64,115 +66,97 @@ export function ProjectSelector({
 
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
-			<PopoverTrigger asChild>
-				{selectedProject ? (
-					<button>
-						<ProjectBadge project={selectedProject} className="mr-2" />
-					</button>
-				) : (
-					<Button variant="outline" className="h-6 px-2 text-xs text-muted-foreground">
-						<Tag className="h-3 w-3 mr-1" />
-						<span>Project</span>
-					</Button>
-				)}
-			</PopoverTrigger>
-			<PopoverContent className="w-[200px] p-2">
-				{/* No Project Option */}
-				<button
-					className={cn(
-						"flex items-center w-full rounded-md px-2 py-1.5 text-sm hover:bg-accent",
-						selectedProjectId === null && "bg-accent",
-					)}
-					onClick={() => {
-						onSelectProject(null)
-						setOpen(false)
-					}}
-				>
-					<span>No Project</span>
-					{selectedProjectId === null && <Check className="h-4 w-4 ml-auto" />}
-				</button>
+			<PopoverTrigger {...props} />
 
-				{/* Projects List */}
-				{projects.length > 0 && (
-					<>
-						<div className="h-px bg-border my-1" />
-						<div className="max-h-[180px] overflow-y-auto py-1">
-							{projects.map((project) => (
-								<button
-									key={project.id}
-									className={cn(
-										"flex items-center w-full rounded-md px-2 py-1.5 text-sm hover:bg-accent",
-										project.id === selectedProjectId && "bg-accent",
-									)}
-									onClick={() => {
-										onSelectProject(project.id)
-										setOpen(false)
-									}}
-								>
-									<ProjectBadge project={project} />
-									{project.id === selectedProjectId && <Check className="h-4 w-4 ml-auto" />}
-								</button>
-							))}
-						</div>
-					</>
-				)}
-
-				{/* Create Project Option */}
-				<>
-					<div className="h-px bg-border my-1" />
-					<Dialog open={isAddProjectOpen} onOpenChange={setIsAddProjectOpen}>
-						<DialogTrigger asChild>
-							<button
-								className="flex items-center w-full rounded-md px-2 py-1.5 text-sm hover:bg-accent"
-								onClick={() => setIsAddProjectOpen(true)}
+			<PopoverContent className="w-[200px] p-0">
+				<Command>
+					<CommandInput placeholder="Search projects..." />
+					<CommandList>
+						<CommandEmpty>No projects found.</CommandEmpty>
+						<CommandGroup>
+							<CommandItem
+								onSelect={() => {
+									onSelectProject(null)
+									setOpen(false)
+								}}
 							>
-								<Plus className="h-4 w-4 mr-2" />
-								<span>Create Project</span>
-							</button>
-						</DialogTrigger>
-						<DialogContent>
-							<DialogHeader>
-								<DialogTitle>Create New Project</DialogTitle>
-							</DialogHeader>
-							<form action={handleAddProject} className="space-y-4">
-								<div className="space-y-2">
-									<label htmlFor="project-name" className="text-sm font-medium">
-										Project Name
-									</label>
-									<Input
-										id="project-name"
-										name="name"
-										value={projectName}
-										onChange={(e) => setProjectName(e.target.value)}
-										placeholder="Enter project name"
-										required
-									/>
-								</div>
+								<span>No Project</span>
+								{selectedProjectId === null && <Check className="h-4 w-4 ml-auto" />}
+							</CommandItem>
+						</CommandGroup>
 
-								<div className="space-y-2">
-									<label className="text-sm font-medium">Project Color</label>
-									<div className="flex flex-wrap gap-2">
-										{colors.map((color) => (
-											<button
-												key={color.value}
-												type="button"
-												className={`w-8 h-8 rounded-full ${projectColor === color.value ? "ring-2 ring-offset-2" : ""}`}
-												style={{ backgroundColor: color.value }}
-												onClick={() => setProjectColor(color.value)}
-												title={color.name}
+						{projects.length > 0 && (
+							<CommandGroup heading="Projects">
+								{projects.map((project) => (
+									<CommandItem
+										key={project.id}
+										onSelect={() => {
+											onSelectProject(project.id)
+											setOpen(false)
+										}}
+									>
+										<ProjectBadge project={project} />
+										{project.id === selectedProjectId && <Check className="h-4 w-4 ml-auto" />}
+									</CommandItem>
+								))}
+							</CommandGroup>
+						)}
+
+						<CommandSeparator />
+
+						<CommandGroup>
+							<Dialog open={isAddProjectOpen} onOpenChange={setIsAddProjectOpen}>
+								<DialogTrigger asChild>
+									<CommandItem onSelect={() => setIsAddProjectOpen(true)}>
+										<Plus className="h-4 w-4 mr-2" />
+										<span>Create Project</span>
+									</CommandItem>
+								</DialogTrigger>
+								<DialogContent>
+									<DialogHeader>
+										<DialogTitle>Create New Project</DialogTitle>
+									</DialogHeader>
+									<form action={handleAddProject} className="space-y-4">
+										<div className="space-y-2">
+											<label htmlFor="project-name" className="text-sm font-medium">
+												Project Name
+											</label>
+											<Input
+												id="project-name"
+												name="name"
+												value={projectName}
+												onChange={(e) => setProjectName(e.target.value)}
+												placeholder="Enter project name"
+												required
 											/>
-										))}
-									</div>
-									<input type="hidden" name="color" value={projectColor} />
-								</div>
+										</div>
 
-								<div className="flex justify-end">
-									<SubmitButton />
-								</div>
-							</form>
-						</DialogContent>
-					</Dialog>
-				</>
+										<div className="space-y-2">
+											<label className="text-sm font-medium">Project Color</label>
+											<div className="flex flex-wrap gap-2">
+												{colors.map((color) => (
+													<button
+														key={color.value}
+														type="button"
+														className={`w-8 h-8 rounded-full ${projectColor === color.value ? "ring-2 ring-offset-2" : ""}`}
+														style={{ backgroundColor: color.value }}
+														onClick={() => setProjectColor(color.value)}
+														title={color.name}
+													/>
+												))}
+											</div>
+											<input type="hidden" name="color" value={projectColor} />
+										</div>
+
+										<div className="flex justify-end">
+											<Button type="submit">Create Project</Button>
+										</div>
+									</form>
+								</DialogContent>
+							</Dialog>
+						</CommandGroup>
+					</CommandList>
+				</Command>
 			</PopoverContent>
 		</Popover>
 	)
