@@ -3,7 +3,6 @@ import { stackServerApp } from "@/stack"
 import { getStripePlan } from "@/app/api/stripe/client"
 import { SettingsPageClient } from "./page-client"
 import { verifyContactChannel } from "./actions"
-import { getStripeCustomerId, syncStripeDataToKV } from "@/lib/stripe"
 
 export default async function SettingsPage({
 	searchParams: searchParamsPromise,
@@ -16,14 +15,6 @@ export default async function SettingsPage({
 	if (searchParams.code && !Array.isArray(searchParams.code)) {
 		// Handle contact channel verification
 		await verifyContactChannel({ code: searchParams.code })
-		redirect("/app/settings")
-	}
-
-	if (searchParams.success) {
-		const customerId = await getStripeCustomerId(user?.id)
-		if (customerId) {
-			await syncStripeDataToKV(customerId)
-		}
 		redirect("/app/settings")
 	}
 

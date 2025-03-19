@@ -20,7 +20,6 @@ export const stripe = remember(
   }
 )
 
-
 const KvStripeCustomerSchema = z.object({
   id: z.string(),
   subscriptionId: z.string(),
@@ -48,7 +47,6 @@ export async function getStripeCustomer(customerId: string) {
   const customer = await kv.get(`stripe:customer:${customerId}`)
   return KvStripeCustomerSchema.nullable().parse(customer)
 }
-
 
 const KvStripeUserSchema = z.string().nullable()
 
@@ -86,47 +84,36 @@ export async function createStripeCustomer({
   }
 }
 
-// Webhooks
-const allowedEventTypes = [
-	"checkout.session.completed",
-	"checkout.session.async_payment_succeeded",
-	"customer.subscription.created",
-	"customer.subscription.updated",
-	"customer.subscription.deleted",
-	"customer.subscription.paused",
-	"customer.subscription.resumed",
-	"customer.subscription.pending_update_applied",
-	"customer.subscription.pending_update_expired",
-	"customer.subscription.trial_will_end",
-	"invoice.paid",
-	"invoice.payment_failed",
-	"invoice.payment_action_required",
-	"invoice.upcoming",
-	"invoice.marked_uncollectible",
-	"invoice.payment_succeeded",
-	"payment_intent.succeeded",
-	"payment_intent.payment_failed",
-	"payment_intent.canceled",
-] as const
-type AllowedEventType = (typeof allowedEventTypes)[number]
 
-export function isAllowedEventType<TEvent extends Stripe.Event>(
-	event: TEvent,
-): event is TEvent & { type: AllowedEventType } {
-	return allowedEventTypes.includes(event.type as AllowedEventType)
-}
+export async function processStripeEvent({ body, signature }: { body: string; signature: string }) {
+  const {
+    event,
+    success: eventSuccess,
+    error: eventError,
+  } = getStripeWebhookEvent({ body, signature })
 
-export function getStripeWebhookEvent({ body, signature }: { body: string; signature: string }) {
-	try {
-		const event = stripe.webhooks.constructEvent(
-			body,
-			signature,
-			process.env.STRIPE_WEBHOOK_SECRET!,
-		)
-		return { success: true as const, event: event, error: null }
-	} catch (error) {
-		return { success: false as const, error: error as Error, event: null }
-	}
+  if (!eventSuccess) {
+    throw new Error(`Stripe webhook event error: ${eventError.message}`)
+  }
+
+  if (!isAllowedEventType(event)) {
+    console.warn(
+      `[STRIPE HOOK] Received untracked event: ${event.type}. Configure webhook event types in your Stripe dashboard.`,
+    )
+    return
+  }
+
+  const { customer } = event.data.object
+  if (typeof customer !== "string") {
+    throw new Error("Stripe webhook handler failed")
+  }
+
+  try {
+    await syncStripeDataToKV(customer)
+  } catch (error) {
+    console.error("Error processing webhook:", error)
+    throw new Error("Stripe webhook handler failed")
+  }
 }
 
 export async function syncStripeDataToKV(customerId: string) {
@@ -165,4 +152,46 @@ export async function syncStripeDataToKV(customerId: string) {
 
   await kv.set(key, subData)
   return subData
+}
+
+const allowedEventTypes = [
+	"checkout.session.completed",
+	"checkout.session.async_payment_succeeded",
+	"customer.subscription.created",
+	"customer.subscription.updated",
+	"customer.subscription.deleted",
+	"customer.subscription.paused",
+	"customer.subscription.resumed",
+	"customer.subscription.pending_update_applied",
+	"customer.subscription.pending_update_expired",
+	"customer.subscription.trial_will_end",
+	"invoice.paid",
+	"invoice.payment_failed",
+	"invoice.payment_action_required",
+	"invoice.upcoming",
+	"invoice.marked_uncollectible",
+	"invoice.payment_succeeded",
+	"payment_intent.succeeded",
+	"payment_intent.payment_failed",
+	"payment_intent.canceled",
+] as const
+type AllowedEventType = (typeof allowedEventTypes)[number]
+
+function isAllowedEventType<TEvent extends Stripe.Event>(
+	event: TEvent,
+): event is TEvent & { type: AllowedEventType } {
+	return allowedEventTypes.includes(event.type as AllowedEventType)
+}
+
+function getStripeWebhookEvent({ body, signature }: { body: string; signature: string }) {
+	try {
+		const event = stripe.webhooks.constructEvent(
+			body,
+			signature,
+			process.env.STRIPE_WEBHOOK_SECRET!,
+		)
+		return { success: true as const, event: event, error: null }
+	} catch (error) {
+		return { success: false as const, error: error as Error, event: null }
+	}
 }
