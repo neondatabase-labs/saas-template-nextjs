@@ -62,7 +62,6 @@ export function SettingsPageClient({
 }) {
 	const user = useUser({ or: "redirect" })
 	const formRef = useRef<HTMLFormElement>(null)
-	const [isPendingVerification, setIsPendingVerification] = useState<string[]>([])
 	const [profileError, setProfileError] = useState("")
 	const [passwordError, setPasswordError] = useState<string | null>(null)
 	const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -290,7 +289,7 @@ export function SettingsPageClient({
 							<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 								<div className="flex items-center gap-2">
 									<span className="font-medium">{channel.value}</span>
-									{channel.isVerified || isPendingVerification.includes(channel.id) ? null : (
+									{!channel.isVerified && (
 										<Badge
 											variant="outline"
 											className="bg-amber-50 text-amber-700 border-amber-200"
@@ -331,24 +330,15 @@ export function SettingsPageClient({
 												</Button>
 											</form>
 										)
-									) : isPendingVerification.includes(channel.id) ? (
-										<Badge
-											variant="outline"
-											className="bg-amber-50 text-amber-700 border-amber-200"
-										>
-											Verification email sent
-										</Badge>
 									) : (
 										<form
 											action={async (formData) => {
-												// TODO: move into useOptimistic
-												setIsPendingVerification([...isPendingVerification, channel.id])
 												await sendVerificationEmail(formData)
 											}}
 										>
 											<input type="hidden" name="id" value={channel.id} />
 											<Button type="submit" variant="outline" size="sm">
-												Verify by email
+												Verify
 											</Button>
 										</form>
 									)}

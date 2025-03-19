@@ -24,15 +24,9 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { addProject } from "@/lib/actions"
-import { useFormStatus } from "react-dom"
 
 function SubmitButton() {
-	const { pending } = useFormStatus()
-	return (
-		<Button type="submit" disabled={pending}>
-			{pending ? "Creating..." : "Create Project"}
-		</Button>
-	)
+	return <Button type="submit">Create Project</Button>
 }
 
 export function ProjectSelector({

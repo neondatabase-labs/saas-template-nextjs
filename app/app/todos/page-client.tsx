@@ -11,21 +11,7 @@ import {
 	bulkUpdateProject,
 	bulkToggleCompleted,
 } from "@/lib/actions"
-import { useFormStatus } from "react-dom"
-import {
-	Search,
-	Plus,
-	Trash,
-	CheckSquare,
-	X,
-	Calendar,
-	AlertCircle,
-	Clock,
-	Tag,
-	Layers,
-	CheckCircle,
-	Circle,
-} from "lucide-react"
+import { Search, Plus, Trash, X, Calendar, AlertCircle, Clock, Tag, Layers } from "lucide-react"
 import type { Todo, Project } from "@/lib/schema"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
@@ -49,14 +35,12 @@ import {
 import { ProjectSelector } from "./project-selector"
 import { ProjectBadge } from "./project-badge"
 
-// Form submit button with loading state
+// Form submit button
 function SubmitButton() {
-	const { pending } = useFormStatus()
-
 	return (
-		<Button type="submit" disabled={pending} size="sm" className="w-full">
+		<Button type="submit" size="sm" className="w-full">
 			<Plus className="h-4 w-4 mr-2" />
-			{pending ? "Adding..." : "Add Todo"}
+			Add Todo
 		</Button>
 	)
 }
@@ -182,7 +166,6 @@ function AddTodoForm({
 	const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
 	const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 	const [todoText, setTodoText] = useState("")
-	const { pending } = useFormStatus()
 
 	async function handleAction(formData: FormData) {
 		const text = formData.get("text") as string
@@ -234,7 +217,6 @@ function AddTodoForm({
 					name="text"
 					placeholder="What needs to be done?"
 					required
-					disabled={pending}
 					value={todoText}
 					onChange={(e) => setTodoText(e.target.value)}
 					autoFocus
@@ -261,7 +243,6 @@ function AddTodoForm({
 								type="button"
 								variant="outline"
 								className="w-full justify-start text-left font-normal"
-								disabled={pending}
 							>
 								<Calendar className="h-4 w-4 mr-2" />
 								{selectedDueDate ? format(selectedDueDate, "PPP") : "Select a date"}
@@ -379,6 +360,7 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 	// Add a new todo optimistically
 	function addOptimisticTodo(todo: Todo) {
 		startTransition(() => {
+			// Add to local state
 			updateOptimisticTodos({ type: "add", todo })
 		})
 	}
@@ -386,8 +368,9 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 	// Delete a todo optimistically
 	function deleteOptimisticTodo(id: number) {
 		startTransition(() => {
+			// Update local state first
 			updateOptimisticTodos({ type: "delete", id })
-			// Send the actual request (non-blocking)
+			// Then send the actual request
 			deleteTodo(id)
 		})
 	}
@@ -397,12 +380,17 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 		const idsToDelete = Array.from(selectedTodoIds)
 
 		startTransition(() => {
+			// Update optimistically
 			updateOptimisticTodos({ type: "deleteMany", ids: idsToDelete })
 
-			// Clear selection
-			setSelectedTodoIds(new Set())
+			// Remove deleted todos from selection
+			setSelectedTodoIds((prev) => {
+				const newSet = new Set(prev)
+				idsToDelete.forEach((id) => newSet.delete(id))
+				return newSet
+			})
 
-			// Send delete requests for each selected todo
+			// Send the actual request
 			idsToDelete.forEach((id) => {
 				deleteTodo(id)
 			})
@@ -410,7 +398,7 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 	}
 
 	// Reschedule multiple todos optimistically
-	function rescheduleSelectedTodos(date: Date | null) {
+	function rescheduleSelectedTodos(date: Date | undefined) {
 		const idsToReschedule = Array.from(selectedTodoIds)
 
 		if (idsToReschedule.length === 0) return
@@ -420,15 +408,14 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 			updateOptimisticTodos({
 				type: "reschedule",
 				ids: idsToReschedule,
-				dueDate: date,
+				dueDate: date || null,
 			})
 
-			// Clear selection and reschedule date
-			setSelectedTodoIds(new Set())
-			setRescheduleDate(undefined)
+			// Close calendar but don't clear selection
+			setIsRescheduleCalendarOpen(false)
 
 			// Send the actual request
-			bulkUpdateDueDate(idsToReschedule, date)
+			bulkUpdateDueDate(idsToReschedule, date || null)
 		})
 	}
 
@@ -446,16 +433,13 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 				projectId,
 			})
 
-			// Clear selection
-			setSelectedTodoIds(new Set())
-
 			// Send the actual request
 			bulkUpdateProject(idsToMove, projectId)
 		})
 	}
 
 	// Mark multiple todos as completed/uncompleted optimistically
-	function toggleSelectedTodosCompleted(completed: boolean) {
+	function markSelectedTodosAs(completed: boolean) {
 		const idsToToggle = Array.from(selectedTodoIds)
 
 		if (idsToToggle.length === 0) return
@@ -467,9 +451,6 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 				ids: idsToToggle,
 				completed,
 			})
-
-			// Clear selection
-			setSelectedTodoIds(new Set())
 
 			// Send the actual request
 			bulkToggleCompleted(idsToToggle, completed)
@@ -492,10 +473,10 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 	// Select or deselect all visible todos
 	function toggleSelectAll(selected: boolean) {
 		if (selected) {
-			// Select all visible todos that aren't optimistic (negative IDs)
+			// Select all visible todos
 			const newSelection = new Set(selectedTodoIds)
 			filteredTodos.forEach((todo) => {
-				if (todo.id > 0) newSelection.add(todo.id)
+				newSelection.add(todo.id)
 			})
 			setSelectedTodoIds(newSelection)
 		} else {
@@ -511,9 +492,9 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 
 	// Check if all visible todos are selected
 	const allSelected =
-		filteredTodos.length > 0 &&
-		filteredTodos.every((todo) => todo.id < 0 || selectedTodoIds.has(todo.id))
+		filteredTodos.length > 0 && filteredTodos.every((todo) => selectedTodoIds.has(todo.id))
 
+	const selectedTodos = filteredTodos.filter((todo) => selectedTodoIds.has(todo.id))
 	// Find the selected project for display
 	const selectedProject =
 		selectedProjectFilter !== null
@@ -532,17 +513,6 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 							<ProjectBadge project={selectedProject} />
 						</div>
 					)}
-				</div>
-				<div className="flex items-center gap-2 text-sm text-muted-foreground">
-					<div className="flex -space-x-1">
-						<div className="h-3 w-3 rounded-full bg-green-500" />
-						<div className="h-3 w-3 rounded-full bg-yellow-500" />
-						<div className="h-3 w-3 rounded-full bg-red-500" />
-					</div>
-					<span>Status</span>
-					<span className="px-2 py-1 rounded-full bg-muted">
-						{completedCount}/{totalCount}
-					</span>
 				</div>
 			</div>
 
@@ -603,55 +573,47 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 			</div>
 
 			{/* Todo list */}
-			<div className="border rounded-lg overflow-hidden">
+			<div className="border rounded-sm overflow-hidden">
 				{/* Card Header with Bulk Actions */}
-				<div className="flex items-center justify-between p-3 bg-muted/50 border-b">
+				<div className="flex items-center justify-between px-2 py-1 bg-muted/50 border-b">
 					{selectedCount > 0 ? (
 						<>
 							{/* Selection Mode Header */}
-							<div className="flex items-center gap-3">
+							<div className="flex items-center gap-2 h-8">
 								<Checkbox
 									id="select-all"
 									checked={allSelected && filteredTodos.length > 0}
 									onCheckedChange={toggleSelectAll}
-									disabled={filteredTodos.length === 0}
+									className="data-[state=checked]:bg-blue-600 data-[state=checked]:text-white data-[state=checked]:border-blue-600"
 								/>
-								<label htmlFor="select-all" className="text-sm font-medium flex items-center gap-2">
-									<CheckSquare className="h-4 w-4" />
-									<span>{selectedCount} selected</span>
+								<label htmlFor="select-all" className="text-sm font-medium">
+									{selectedCount} selected
 								</label>
 							</div>
 							<div className="flex items-center gap-2">
-								<Button
-									variant="outline"
-									size="sm"
-									disabled={isPending}
-									className="flex items-center gap-1"
-									onClick={() => toggleSelectedTodosCompleted(true)}
-								>
-									<CheckCircle className="h-4 w-4 mr-1" />
-									Mark Complete
-								</Button>
-
-								<Button
-									variant="outline"
-									size="sm"
-									disabled={isPending}
-									className="flex items-center gap-1"
-									onClick={() => toggleSelectedTodosCompleted(false)}
-								>
-									<Circle className="h-4 w-4 mr-1" />
-									Mark Incomplete
-								</Button>
+								{!selectedTodos.every((todo) => todo.completed) ? (
+									<Button
+										variant="outline"
+										size="sm"
+										className="flex items-center gap-1"
+										onClick={() => markSelectedTodosAs(true)}
+									>
+										Done
+									</Button>
+								) : (
+									<Button
+										variant="outline"
+										size="sm"
+										className="flex items-center gap-1"
+										onClick={() => markSelectedTodosAs(false)}
+									>
+										Not done
+									</Button>
+								)}
 
 								<Popover>
 									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={isPending}
-											className="flex items-center gap-1"
-										>
+										<Button variant="outline" size="sm" className="flex items-center gap-1">
 											<Tag className="h-4 w-4 mr-1" />
 											Move to Project
 										</Button>
@@ -679,12 +641,7 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 
 								<Popover open={isRescheduleCalendarOpen} onOpenChange={setIsRescheduleCalendarOpen}>
 									<PopoverTrigger asChild>
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={isPending}
-											className="flex items-center gap-1"
-										>
+										<Button variant="outline" size="sm" className="flex items-center gap-1">
 											<Clock className="h-4 w-4 mr-1" />
 											Reschedule
 										</Button>
@@ -709,8 +666,7 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 												variant="ghost"
 												size="sm"
 												onClick={() => {
-													rescheduleSelectedTodos(null)
-													setIsRescheduleCalendarOpen(false)
+													rescheduleSelectedTodos(undefined)
 												}}
 											>
 												Clear Date
@@ -729,10 +685,8 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 													onClick={() => {
 														if (rescheduleDate) {
 															rescheduleSelectedTodos(rescheduleDate)
-															setIsRescheduleCalendarOpen(false)
 														}
 													}}
-													disabled={!rescheduleDate}
 												>
 													Apply
 												</Button>
@@ -740,26 +694,20 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 										</div>
 									</PopoverContent>
 								</Popover>
-								<Button
-									variant="destructive"
-									size="sm"
-									onClick={deleteSelectedTodos}
-									disabled={isPending}
-								>
-									<Trash className="h-4 w-4 mr-2" />
-									Delete
+								<Button variant="ghost" size="sm" onClick={deleteSelectedTodos}>
+									<Trash className="h-4 w-4" />
 								</Button>
 							</div>
 						</>
 					) : (
 						<>
 							{/* Normal Mode Header */}
-							<div className="flex items-center gap-3">
+							<div className="flex items-center gap-2 h-8">
 								<Checkbox
 									id="select-all"
 									checked={allSelected && filteredTodos.length > 0}
 									onCheckedChange={toggleSelectAll}
-									disabled={filteredTodos.length === 0}
+									className="data-[state=checked]:bg-blue-600 data-[state=checked]:text-white data-[state=checked]:border-blue-600"
 								/>
 								<label htmlFor="select-all" className="text-sm font-medium">
 									Select All
