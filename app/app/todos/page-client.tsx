@@ -188,13 +188,11 @@ export function TodosPageClient({
 	projects,
 	totalCreatedTodos,
 	todoLimit,
-	isAtCapacity,
 }: {
 	todos: Todo[]
 	projects: Project[]
 	totalCreatedTodos: number
 	todoLimit: number
-	isAtCapacity: boolean
 }) {
 	const [, startTransition] = useTransition()
 	const [searchQuery, setSearchQuery] = useState("")
@@ -211,6 +209,7 @@ export function TodosPageClient({
 			return state + quantity
 		},
 	)
+
 	// Optimistic state management for todos list
 	const [optimisticTodos, updateOptimisticTodos] = useOptimistic(
 		todos,
@@ -258,22 +257,9 @@ export function TodosPageClient({
 
 	// Calculate metrics
 	const totalTodos = optimisticTodos.length
-	const completedTodos = optimisticTodos.filter((todo) => todo.completed).length
-	const completionRate = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0
 
-	// Filter todos based on search query and selected project
-	const filteredTodos = optimisticTodos.filter((todo) => {
-		const matchesSearch = todo.text.toLowerCase().includes(searchQuery.toLowerCase())
-		const matchesProject =
-			selectedProjectFilter === null || todo.projectId === selectedProjectFilter
-		return matchesSearch && matchesProject
-	})
-
-	// Group filtered todos by due date
-	const todoGroups = groupTodosByDueDate(filteredTodos)
-
-	// Count of selected todos
-	const selectedCount = selectedTodoIds.size
+	// Check if at capacity based on current todos count
+	const isCurrentlyAtCapacity = totalTodos >= todoLimit
 
 	// Add a new todo optimistically
 	function addOptimisticTodo(todo: Todo) {
@@ -381,7 +367,7 @@ export function TodosPageClient({
 		if (selected) {
 			// Select all visible todos
 			const newSelection = new Set(selectedTodoIds)
-			filteredTodos.forEach((todo) => {
+			optimisticTodos.forEach((todo) => {
 				newSelection.add(todo.id)
 			})
 			setSelectedTodoIds(newSelection)
@@ -398,9 +384,9 @@ export function TodosPageClient({
 
 	// Check if all visible todos are selected
 	const allSelected =
-		filteredTodos.length > 0 && filteredTodos.every((todo) => selectedTodoIds.has(todo.id))
+		optimisticTodos.length > 0 && optimisticTodos.every((todo) => selectedTodoIds.has(todo.id))
 
-	const selectedTodos = filteredTodos.filter((todo) => selectedTodoIds.has(todo.id))
+	const selectedTodos = optimisticTodos.filter((todo) => selectedTodoIds.has(todo.id))
 	// Find the selected project for display
 	const selectedProject =
 		selectedProjectFilter !== null
@@ -443,23 +429,23 @@ export function TodosPageClient({
 			<div className="grid grid-cols-5 gap-4">
 				<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border shadow-sm col-span-2">
 					<div className="flex items-center justify-between mb-1">
-						<h3 className="text-sm font-medium text-muted-foreground">Deadlines</h3>
+						<h3 className="text-sm font-medium text-muted-foreground">Active Deadlines</h3>
 					</div>
 					<div className="flex items-baseline justify-between mb-2">
 						<p className="text-2xl font-bold">
-							{totalCreated}/{todoLimit}
+							{totalTodos}/{todoLimit}
 						</p>
 						<p className="text-sm text-muted-foreground">
-							{isAtCapacity ? (
-								<span className="text-red-500 dark:text-red-400">Upgrade to create more</span>
+							{isCurrentlyAtCapacity ? (
+								<span className="text-red-500 dark:text-red-400">Upgrade to add more</span>
 							) : (
-								<span>{todoLimit - totalCreated} remaining</span>
+								<span>{todoLimit - totalTodos} remaining</span>
 							)}
 						</p>
 					</div>
 					<Progress
-						value={(totalCreated / todoLimit) * 100}
-						className={isAtCapacity ? "bg-red-200 dark:bg-red-900" : ""}
+						value={(totalTodos / todoLimit) * 100}
+						className={isCurrentlyAtCapacity ? "bg-red-200 dark:bg-red-900" : ""}
 					/>
 				</div>
 			</div>
@@ -501,27 +487,27 @@ export function TodosPageClient({
 
 				<Dialog modal open={isAddTodoOpen} onOpenChange={setIsAddTodoOpen}>
 					<DialogTrigger asChild>
-						{isAtCapacity ? (
+						{isCurrentlyAtCapacity ? (
 							<Button
 								size="sm"
 								variant="outline"
 								className="text-red-500 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950 gap-2"
 							>
 								<Zap className="h-4 w-4" />
-								Upgrade to Add More
+								Upgrade to Pro to add more
 							</Button>
 						) : (
 							<Button size="sm">New deadline</Button>
 						)}
 					</DialogTrigger>
 					<DialogContent>
-						{isAtCapacity ? (
+						{isCurrentlyAtCapacity ? (
 							<>
 								<DialogHeader>
 									<DialogTitle>Todo Limit Reached</DialogTitle>
 									<DialogDescription>
-										You've reached your limit of {todoLimit} todos. Upgrade to Pro to create
-										unlimited todos.
+										You&apos;ve reached your limit of {todoLimit} active todos. Delete some todos or
+										upgrade to Pro for a higher limit.
 									</DialogDescription>
 								</DialogHeader>
 								<div className="py-6">
@@ -533,14 +519,14 @@ export function TodosPageClient({
 											<div>
 												<h3 className="font-semibold">Pro Plan Benefits</h3>
 												<p className="text-sm text-muted-foreground">
-													Unlimited todos and advanced features
+													Higher todo limits and advanced features
 												</p>
 											</div>
 										</div>
 										<ul className="grid gap-2 mt-4 text-sm">
 											<li className="flex items-center gap-2">
 												<Zap className="h-4 w-4 text-primary" />
-												<span>Unlimited todos</span>
+												<span>Up to {1000} active todos</span>
 											</li>
 											<li className="flex items-center gap-2">
 												<CalendarIcon className="h-4 w-4 text-primary" />
@@ -579,18 +565,18 @@ export function TodosPageClient({
 			<div className="border rounded-sm overflow-hidden">
 				{/* Card Header with Bulk Actions */}
 				<div className="flex items-center justify-between px-2 py-1 bg-muted/50 border-b">
-					{selectedCount > 0 ? (
+					{selectedTodoIds.size > 0 ? (
 						<>
 							{/* Selection Mode Header */}
 							<div className="flex items-center gap-2 h-8">
 								<Checkbox
 									id="select-all"
-									checked={allSelected && filteredTodos.length > 0}
+									checked={allSelected && optimisticTodos.length > 0}
 									onCheckedChange={toggleSelectAll}
 									className="data-[state=checked]:bg-blue-600 data-[state=checked]:text-white data-[state=checked]:border-blue-600"
 								/>
 								<label htmlFor="select-all" className="text-sm font-medium">
-									{selectedCount} selected
+									{selectedTodoIds.size} selected
 								</label>
 							</div>
 							<div className="flex items-center gap-2">
@@ -639,8 +625,8 @@ export function TodosPageClient({
 									<PopoverContent className="w-auto p-0" align="end">
 										<div className="p-2 border-b">
 											<h3 className="text-sm font-medium">
-												Reschedule {selectedCount} item
-												{selectedCount !== 1 ? "s" : ""}
+												Reschedule {selectedTodoIds.size} item
+												{selectedTodoIds.size !== 1 ? "s" : ""}
 											</h3>
 										</div>
 										<Calendar
@@ -695,7 +681,7 @@ export function TodosPageClient({
 							<div className="flex items-center gap-2 h-8">
 								<Checkbox
 									id="select-all"
-									checked={allSelected && filteredTodos.length > 0}
+									checked={allSelected && optimisticTodos.length > 0}
 									onCheckedChange={toggleSelectAll}
 									className="data-[state=checked]:bg-blue-600 data-[state=checked]:text-white data-[state=checked]:border-blue-600"
 								/>
@@ -704,17 +690,17 @@ export function TodosPageClient({
 								</label>
 							</div>
 							<div className="text-sm text-muted-foreground">
-								{filteredTodos.length} item
-								{filteredTodos.length !== 1 ? "s" : ""}
+								{optimisticTodos.length} item
+								{optimisticTodos.length !== 1 ? "s" : ""}
 							</div>
 						</>
 					)}
 				</div>
 
 				{/* Todo Groups */}
-				{filteredTodos.length === 0 && !searchQuery && !selectedProjectFilter ? (
+				{optimisticTodos.length === 0 && !searchQuery && !selectedProjectFilter ? (
 					<p className="text-center text-muted-foreground py-4">No todos yet. Add one above!</p>
-				) : filteredTodos.length === 0 ? (
+				) : optimisticTodos.length === 0 ? (
 					<p className="text-center text-muted-foreground py-4">
 						{selectedProjectFilter !== null
 							? "No todos in this project"
@@ -722,7 +708,7 @@ export function TodosPageClient({
 					</p>
 				) : (
 					<div className="grid grid-cols-[1fr_auto_auto_auto]">
-						{todoGroups.map((group) => (
+						{groupTodosByDueDate(optimisticTodos).map((group) => (
 							<div key={group.label} className="col-span-4 grid grid-cols-subgrid">
 								{/* Date Header */}
 								<div

@@ -78,9 +78,14 @@ export async function addTodo(formData: FormData) {
       userMetrics = newMetrics
     }
 
+    // Count total todos 
+    const totalTodos = await db.select({ count: count() }).from(todos).then(
+      result => result[0]?.count ?? 0
+    )
+    
     const plan = await getStripePlan(user.id)
-    if (userMetrics.todosCreated >= plan.todoLimit) {
-      return { error: "You have reached your todo creation limit" }
+    if (totalTodos >= plan.todoLimit) {
+      return { error: "You have reached your todo limit. Delete some todos to create new ones." }
     }
     
     await db.insert(todos).values({
@@ -347,9 +352,8 @@ export async function getUserTodoMetrics(userId: string) {
     const plan = await getStripePlan(userId)
     
     return { 
-      todosCreated: userMetrics.todosCreated,
+      todosCreated: userMetrics.todosCreated, // Lifetime total (still tracked)
       todoLimit: plan.todoLimit,
-      remaining: plan.todoLimit - userMetrics.todosCreated,
       subscription: plan.id
     }
   } catch (error) {

@@ -20,7 +20,6 @@ export default async function TodosPage() {
 	// Get the total created todos and todo limit from the user metrics
 	const totalCreatedTodos = userMetrics && !("error" in userMetrics) ? userMetrics.todosCreated : 0
 	const todoLimit = userMetrics && !("error" in userMetrics) ? userMetrics.todoLimit : 10
-	const isAtCapacity = totalCreatedTodos >= todoLimit
 
 	return (
 		<div className="container max-w-6xl mx-auto py-8 px-4">
@@ -29,7 +28,6 @@ export default async function TodosPage() {
 				projects={projects}
 				totalCreatedTodos={totalCreatedTodos}
 				todoLimit={todoLimit}
-				isAtCapacity={isAtCapacity}
 			/>
 		</div>
 	)
