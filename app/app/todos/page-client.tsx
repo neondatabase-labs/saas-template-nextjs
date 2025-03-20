@@ -232,6 +232,7 @@ function AddTodoForm({
 					selectedProjectId={selectedProjectId}
 					onSelectProject={setSelectedProjectId}
 					onProjectAdded={onProjectAdded}
+					asChild
 				>
 					{selectedProject ? (
 						<button type="button">
@@ -286,7 +287,7 @@ function AddTodoForm({
 	)
 }
 
-export function TodosPageClient({ todos, projects }: TodoPageProps) {
+export function TodosPageClient({ todos, projects, totalCreatedTodos }: TodoPageProps) {
 	const [, startTransition] = useTransition()
 	const [searchQuery, setSearchQuery] = useState("")
 	const [selectedTodoIds, setSelectedTodoIds] = useState<Set<number>>(new Set())
@@ -341,6 +342,11 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 		},
 	)
 
+	// Calculate metrics
+	const totalTodos = optimisticTodos.length
+	const completedTodos = optimisticTodos.filter((todo) => todo.completed).length
+	const completionRate = totalTodos > 0 ? Math.round((completedTodos / totalTodos) * 100) : 0
+
 	// Filter todos based on search query and selected project
 	const filteredTodos = optimisticTodos.filter((todo) => {
 		const matchesSearch = todo.text.toLowerCase().includes(searchQuery.toLowerCase())
@@ -366,17 +372,16 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 	// Delete multiple todos optimistically
 	function deleteSelectedTodos() {
 		const idsToDelete = Array.from(selectedTodoIds)
+		// Remove deleted todos from selection
+		setSelectedTodoIds((prev) => {
+			const newSet = new Set(prev)
+			idsToDelete.forEach((id) => newSet.delete(id))
+			return newSet
+		})
 
 		startTransition(() => {
 			// Update optimistically
 			updateOptimisticTodos({ type: "deleteMany", ids: idsToDelete })
-
-			// Remove deleted todos from selection
-			setSelectedTodoIds((prev) => {
-				const newSet = new Set(prev)
-				idsToDelete.forEach((id) => newSet.delete(id))
-				return newSet
-			})
 
 			// Send the actual request
 			idsToDelete.forEach((id) => {
@@ -489,6 +494,24 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 			? optimisticProjects.find((p) => p.id === selectedProjectFilter)
 			: null
 
+	// Add a function to handle single todo deletion
+	function handleDeleteTodo(id: number) {
+		startTransition(() => {
+			// Update optimistically
+			updateOptimisticTodos({ type: "delete", id })
+
+			// Remove the todo from selection
+			setSelectedTodoIds((prev) => {
+				const newSet = new Set(prev)
+				newSet.delete(id)
+				return newSet
+			})
+
+			// Send the actual request
+			deleteTodo(id)
+		})
+	}
+
 	return (
 		<div className="space-y-6">
 			<div className="flex justify-between items-center">
@@ -500,6 +523,35 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 							<ProjectBadge project={selectedProject} />
 						</div>
 					)}
+				</div>
+			</div>
+
+			{/* Productivity Metrics */}
+			<div className="grid grid-cols-5 gap-4">
+				<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border shadow-sm">
+					<h3 className="text-sm font-medium text-muted-foreground mb-1">Total Created</h3>
+					<div className="flex items-baseline justify-between">
+						<p className="text-2xl font-bold">{totalCreatedTodos}</p>
+						<p className="text-sm text-muted-foreground">lifetime</p>
+					</div>
+				</div>
+
+				<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border shadow-sm">
+					<h3 className="text-sm font-medium text-muted-foreground mb-1">Total Progress</h3>
+					<div className="flex items-baseline justify-between">
+						<p className="text-2xl font-bold">
+							{completedTodos}/{totalTodos}
+						</p>
+						<p className="text-sm text-muted-foreground">{completionRate}% complete</p>
+					</div>
+				</div>
+
+				<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border shadow-sm">
+					<h3 className="text-sm font-medium text-muted-foreground mb-1">Completion Rate</h3>
+					<div className="flex items-baseline justify-between">
+						<p className="text-2xl font-bold">{completionRate}%</p>
+						<p className="text-sm text-muted-foreground">{completedTodos} completed</p>
+					</div>
 				</div>
 			</div>
 
@@ -522,6 +574,7 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 						selectedProjectId={selectedProjectFilter}
 						onSelectProject={setSelectedProjectFilter}
 						onProjectAdded={handleProjectAdded}
+						asChild
 					>
 						{selectedProject ? (
 							<Button variant="outline" size="sm">
@@ -807,6 +860,7 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 																})
 															}}
 															onProjectAdded={handleProjectAdded}
+															asChild
 														>
 															{project ? (
 																<button>
@@ -822,6 +876,16 @@ export function TodosPageClient({ todos, projects }: TodoPageProps) {
 																</Button>
 															)}
 														</ProjectSelector>
+
+														<Button
+															variant="ghost"
+															size="icon"
+															className="h-6 w-6 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+															onClick={() => handleDeleteTodo(todo.id)}
+															aria-label="Delete todo"
+														>
+															<Trash className="h-3.5 w-3.5" />
+														</Button>
 													</div>
 												</div>
 											)
@@ -927,4 +991,5 @@ function TodoDueDateButton({
 interface TodoPageProps {
 	todos: Todo[]
 	projects: Project[]
+	totalCreatedTodos: number // Total todos created in DB for subscription limits
 }

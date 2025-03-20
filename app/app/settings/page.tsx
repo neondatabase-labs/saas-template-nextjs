@@ -3,6 +3,7 @@ import { stackServerApp } from "@/stack"
 import { getStripePlan } from "@/app/api/stripe/client"
 import { SettingsPageClient } from "./page-client"
 import { verifyContactChannel } from "./actions"
+import { getUserTodoMetrics } from "@/lib/actions"
 
 export default async function SettingsPage({
 	searchParams: searchParamsPromise,
@@ -21,6 +22,9 @@ export default async function SettingsPage({
 	const plan = await getStripePlan(user?.id)
 	const contactChannels = await user?.listContactChannels()
 
+	// Get user's todo metrics
+	const todoMetrics = user ? await getUserTodoMetrics(user.id) : null
+
 	return (
 		<SettingsPageClient
 			planId={plan.id}
@@ -34,6 +38,7 @@ export default async function SettingsPage({
 					usedForAuth: channel.usedForAuth,
 				})) ?? []
 			}
+			todoMetrics={todoMetrics && "error" in todoMetrics ? null : todoMetrics}
 		/>
 	)
 }

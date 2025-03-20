@@ -2,8 +2,25 @@
 
 import { revalidatePath } from "next/cache"
 import { db } from "./db"
-import { todos, projects, users, type NewTodo, type NewProject } from "./schema"
-import { eq, inArray, desc } from "drizzle-orm"
+import { todos, projects, users_sync, user_metrics, type NewTodo, type NewProject } from "./schema"
+import { eq, inArray, desc, count, and, isNull } from "drizzle-orm"
+import { getStripePlan } from "@/app/api/stripe/client"
+import { stackServerApp } from "@/stack"
+
+// Function to get a user's todo limit based on their auth ID
+async function getUserTodoLimit(userId: string): Promise<number> {
+  try {
+    // Get the user's subscription plan from Stripe
+    const plan = await getStripePlan(userId)
+    
+    // Return the todo limit from the plan
+    return plan.todoLimit
+  } catch (error) {
+    console.error("Failed to get user todo limit:", error)
+    // Default to FREE plan limit of 10 in case of error
+    return 10
+  }
+}
 
 export async function getTodos() {
   try {
@@ -25,7 +42,9 @@ export async function getProjects() {
 
 export async function getUsers() {
   try {
-    return await db.select().from(users).orderBy(users.name)
+    return await db.select().from(users_sync)
+      .where(isNull(users_sync.deleted_at))
+      .orderBy(users_sync.name)
   } catch (error) {
     console.error("Failed to fetch users:", error)
     return []
@@ -36,23 +55,48 @@ export async function addTodo(formData: FormData) {
   const text = formData.get("text") as string
   const dueDateStr = formData.get("dueDate") as string | null
   const projectIdStr = formData.get("projectId") as string | null
-  const assignedUserIdStr = formData.get("assignedUserId") as string | null
 
   if (!text?.trim()) {
     return { error: "Todo text is required" }
   }
 
+  const user = await stackServerApp.getUser({ or: "redirect" })
+  if (!user) {
+    return { error: "User not found" }
+  }
+
   try {
-    const newTodo: NewTodo = {
-      text,
-      // Convert the date string to a Date object if it exists
-      dueDate: dueDateStr ? new Date(dueDateStr) : null,
-      // Convert the project ID to a number if it exists
-      projectId: projectIdStr ? Number.parseInt(projectIdStr) : null,
-      // Convert the assigned user ID to a number if it exists
-      assignedUserId: assignedUserIdStr ? Number.parseInt(assignedUserIdStr) : null,
+    let userMetrics = await db.query.user_metrics.findFirst({
+      where: eq(user_metrics.userId, user.id)
+    })
+    
+    if (!userMetrics) {
+      // Create initial metrics record for user
+      const [newMetrics] = await db.insert(user_metrics)
+        .values({ userId: user.id, todosCreated: 0 })
+        .returning()
+      userMetrics = newMetrics
     }
-    await db.insert(todos).values(newTodo)
+
+    const plan = await getStripePlan(user.id)
+    if (userMetrics.todosCreated >= plan.todoLimit) {
+      return { error: "You have reached your todo creation limit" }
+    }
+    
+    await db.insert(todos).values({
+      text,
+      dueDate: dueDateStr ? new Date(dueDateStr) : null,
+      projectId: projectIdStr ? Number.parseInt(projectIdStr) : null,
+    })
+    
+
+    await db.update(user_metrics)
+      .set({ 
+        todosCreated: userMetrics.todosCreated + 1,
+        updatedAt: new Date()
+      })
+      .where(eq(user_metrics.id, userMetrics.id))
+    
     revalidatePath("/")
     return { success: true }
   } catch (error) {
@@ -151,7 +195,7 @@ export async function bulkUpdateProject(ids: number[], projectId: number | null)
   }
 }
 
-export async function updateAssignedUser(id: number, assignedUserId: number | null) {
+export async function updateAssignedUser(id: number, assignedUserId: string | null) {
   // Don't try to update optimistic todos
   if (id < 0) return { success: false }
 
@@ -165,7 +209,7 @@ export async function updateAssignedUser(id: number, assignedUserId: number | nu
   }
 }
 
-export async function bulkUpdateAssignedUser(ids: number[], assignedUserId: number | null) {
+export async function bulkUpdateAssignedUser(ids: number[], assignedUserId: string | null) {
   // Filter out any negative IDs (optimistic todos)
   const validIds = ids.filter((id) => id > 0)
 
@@ -235,5 +279,101 @@ export async function bulkToggleCompleted(ids: number[], completed: boolean) {
   } catch (error) {
     console.error("Failed to bulk update completion status:", error)
     return { error: `Failed to mark todos as ${completed ? "completed" : "incomplete"}` }
+  }
+}
+
+export async function getTotalCreatedTodos() {
+  try {
+    const result = await db.select({ count: count() }).from(todos)
+    return result[0]?.count ?? 0
+  } catch (error) {
+    console.error("Failed to count todos:", error)
+    return 0
+  }
+}
+
+// Get current user's total created todos count
+export async function getCurrentUserTodosCreated() {
+  try {
+    const user = await stackServerApp.getUser()
+    if (!user) {
+      return 0
+    }
+    
+    const userMetrics = await db.query.user_metrics.findFirst({
+      where: eq(user_metrics.userId, user.id)
+    })
+    
+    return userMetrics?.todosCreated ?? 0
+  } catch (error) {
+    console.error("Failed to get user's total created todos:", error)
+    return 0
+  }
+}
+
+export async function getUserTodoMetrics(userId: string) {
+  try {
+    const user = await db.query.users_sync.findFirst({
+      where: eq(users_sync.id, userId)
+    })
+    
+    if (!user) {
+      return { error: "User not found" }
+    }
+    
+    // Get or create user metrics
+    let userMetrics = await db.query.user_metrics.findFirst({
+      where: eq(user_metrics.userId, userId)
+    })
+    
+    if (!userMetrics) {
+      // Create initial metrics record for user
+      const [newMetrics] = await db.insert(user_metrics)
+        .values({ userId, todosCreated: 0 })
+        .returning()
+      userMetrics = newMetrics
+    }
+    
+    // Get the user's plan details
+    const plan = await getStripePlan(userId)
+    
+    return { 
+      todosCreated: userMetrics.todosCreated,
+      todoLimit: plan.todoLimit,
+      remaining: plan.todoLimit - userMetrics.todosCreated,
+      subscription: plan.id
+    }
+  } catch (error) {
+    console.error("Failed to get user todo metrics:", error)
+    return { error: "Failed to get user metrics" }
+  }
+}
+
+export async function resetUserTodosCreated(userId: string) {
+  try {
+    // Find the user metrics
+    const userMetrics = await db.query.user_metrics.findFirst({
+      where: eq(user_metrics.userId, userId)
+    })
+    
+    if (userMetrics) {
+      // Update existing metrics
+      await db.update(user_metrics)
+        .set({ 
+          todosCreated: 0,
+          updatedAt: new Date()
+        })
+        .where(eq(user_metrics.id, userMetrics.id))
+    } else {
+      // Create new metrics with 0 todos
+      await db.insert(user_metrics)
+        .values({ userId, todosCreated: 0 })
+    }
+      
+    revalidatePath("/")
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to reset user todos created count:", error)
+    return { error: "Failed to reset todos created count" }
   }
 }

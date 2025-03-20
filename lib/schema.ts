@@ -1,4 +1,4 @@
-import { text, boolean, pgTable, serial, timestamp, integer } from "drizzle-orm/pg-core"
+import { text, boolean, pgTable, serial, timestamp, integer, jsonb } from "drizzle-orm/pg-core"
 import { relations } from "drizzle-orm"
 
 export const projects = pgTable("projects", {
@@ -8,12 +8,24 @@ export const projects = pgTable("projects", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
 
-export const users = pgTable("users", {
+// Define the neon_auth schema users_sync table
+export const users_sync = pgTable("neon_auth.users_sync", {
+  id: text("id").primaryKey(),
+  email: text("email"), 
+  name: text("name"),
+  raw_json: jsonb("raw_json").notNull(),
+  created_at: timestamp("created_at"),
+  deleted_at: timestamp("deleted_at"),
+  updated_at: timestamp("updated_at"),
+})
+
+// Separate table to track user metrics
+export const user_metrics = pgTable("user_metrics", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull(),
-  avatarUrl: text("avatar_url"),
+  userId: text("user_id").notNull().references(() => users_sync.id),
+  todosCreated: integer("todos_created").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 })
 
 export const todos = pgTable("todos", {
@@ -22,7 +34,7 @@ export const todos = pgTable("todos", {
   completed: boolean("completed").default(false).notNull(),
   dueDate: timestamp("due_date"),
   projectId: integer("project_id").references(() => projects.id),
-  assignedUserId: integer("assigned_user_id").references(() => users.id),
+  assignedUserId: text("assigned_user_id").references(() => users_sync.id),
 })
 
 // Define relations
@@ -30,8 +42,17 @@ export const projectsRelations = relations(projects, ({ many }) => ({
   todos: many(todos),
 }))
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users_sync, ({ many }) => ({
   assignedTodos: many(todos, { relationName: "assignedTodos" }),
+  metrics: many(user_metrics, { relationName: "metrics" }),
+}))
+
+export const userMetricsRelations = relations(user_metrics, ({ one }) => ({
+  user: one(users_sync, {
+    fields: [user_metrics.userId],
+    references: [users_sync.id],
+    relationName: "metrics",
+  }),
 }))
 
 export const todosRelations = relations(todos, ({ one }) => ({
@@ -39,9 +60,9 @@ export const todosRelations = relations(todos, ({ one }) => ({
     fields: [todos.projectId],
     references: [projects.id],
   }),
-  assignedUser: one(users, {
+  assignedUser: one(users_sync, {
     fields: [todos.assignedUserId],
-    references: [users.id],
+    references: [users_sync.id],
     relationName: "assignedTodos",
   }),
 }))
@@ -50,6 +71,7 @@ export type Todo = typeof todos.$inferSelect
 export type NewTodo = typeof todos.$inferInsert
 export type Project = typeof projects.$inferSelect
 export type NewProject = typeof projects.$inferInsert
-export type User = typeof users.$inferSelect
-export type NewUser = typeof users.$inferInsert
-
+export type User = typeof users_sync.$inferSelect
+export type NewUser = typeof users_sync.$inferInsert
+export type UserMetrics = typeof user_metrics.$inferSelect
+export type NewUserMetrics = typeof user_metrics.$inferInsert

@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless"
 import { drizzle } from "drizzle-orm/neon-http"
 
-// This function will programmatically create the todos table if it doesn't exist
+// This function will programmatically create the needed tables if they don't exist
 export async function runMigrations() {
   try {
     // Create a Neon SQL client
@@ -10,42 +10,46 @@ export async function runMigrations() {
     // Create a Drizzle ORM instance
     const migrationClient = drizzle(neonClient)
 
-    console.log("Checking if users table exists...")
-
-    // Check if the users table exists
-    const usersTableExists = await migrationClient.execute(`
+    // Check if neon_auth schema exists
+    const neonAuthSchemaExists = await migrationClient.execute(`
       SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public'
-        AND table_name = 'users'
+        SELECT FROM information_schema.schemata
+        WHERE schema_name = 'neon_auth'
       );
     `)
 
-    // If the users table doesn't exist, create it
-    if (!usersTableExists.rows[0]?.exists) {
-      console.log("Creating users table...")
+    // Create neon_auth schema if it doesn't exist
+    if (!neonAuthSchemaExists.rows[0]?.exists) {
+      console.log("Creating neon_auth schema...")
+      await migrationClient.execute(`CREATE SCHEMA IF NOT EXISTS neon_auth;`)
+      console.log("neon_auth schema created successfully!")
+    }
+
+    // Checking if user_metrics table exists
+    console.log("Checking if user_metrics table exists...")
+    const userMetricsTableExists = await migrationClient.execute(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        AND table_name = 'user_metrics'
+      );
+    `)
+
+    // If the user_metrics table doesn't exist, create it
+    if (!userMetricsTableExists.rows[0]?.exists) {
+      console.log("Creating user_metrics table...")
 
       await migrationClient.execute(`
-        CREATE TABLE IF NOT EXISTS users (
+        CREATE TABLE IF NOT EXISTS user_metrics (
           id SERIAL PRIMARY KEY,
-          name TEXT NOT NULL,
-          email TEXT NOT NULL,
-          avatar_url TEXT,
-          created_at TIMESTAMP DEFAULT NOW() NOT NULL
+          user_id TEXT NOT NULL REFERENCES neon_auth.users_sync(id),
+          todos_created INTEGER NOT NULL DEFAULT 0,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          updated_at TIMESTAMP DEFAULT NOW() NOT NULL
         );
       `)
 
-      // Insert some sample users
-      await migrationClient.execute(`
-        INSERT INTO users (name, email, avatar_url)
-        VALUES 
-          ('Alex Johnson', 'alex@example.com', 'https://ui-avatars.com/api/?name=Alex+Johnson&background=random'),
-          ('Sam Taylor', 'sam@example.com', 'https://ui-avatars.com/api/?name=Sam+Taylor&background=random'),
-          ('Jordan Lee', 'jordan@example.com', 'https://ui-avatars.com/api/?name=Jordan+Lee&background=random'),
-          ('Casey Smith', 'casey@example.com', 'https://ui-avatars.com/api/?name=Casey+Smith&background=random');
-      `)
-
-      console.log("Users table created successfully with sample data!")
+      console.log("user_metrics table created successfully!")
     }
 
     console.log("Checking if projects table exists...")
@@ -97,7 +101,7 @@ export async function runMigrations() {
           completed BOOLEAN NOT NULL DEFAULT false,
           due_date TIMESTAMP,
           project_id INTEGER REFERENCES projects(id),
-          assigned_user_id INTEGER REFERENCES users(id)
+          assigned_user_id TEXT REFERENCES neon_auth.users_sync(id)
         );
       `)
 
@@ -127,28 +131,42 @@ export async function runMigrations() {
         console.log("project_id column already exists.")
       }
 
-      // Check if assigned_user_id column exists
-      const assignedUserIdColumnExists = await migrationClient.execute(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.columns
-          WHERE table_schema = 'public'
-          AND table_name = 'todos'
-          AND column_name = 'assigned_user_id'
-        );
+      // Check assigned_user_id column type and update if needed
+      const assignedUserIdTypeResult = await migrationClient.execute(`
+        SELECT data_type 
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+        AND table_name = 'todos'
+        AND column_name = 'assigned_user_id';
       `)
 
-      // If the column doesn't exist, add it
-      if (!assignedUserIdColumnExists.rows[0]?.exists) {
+      if (assignedUserIdTypeResult.rows.length > 0) {
+        const currentType = assignedUserIdTypeResult.rows[0]?.data_type
+
+        // If assigned_user_id is INTEGER, we need to change it to TEXT
+        if (currentType === 'integer') {
+          console.log("Updating assigned_user_id column type from INTEGER to TEXT...")
+
+          // Drop the column and recreate it with TEXT type
+          await migrationClient.execute(
+            `ALTER TABLE todos DROP COLUMN assigned_user_id;`,
+          )
+          await migrationClient.execute(
+            `ALTER TABLE todos ADD COLUMN assigned_user_id TEXT REFERENCES neon_auth.users_sync(id);`,
+          )
+
+          console.log("assigned_user_id column type updated successfully!")
+        }
+      } else {
+        // If assigned_user_id column doesn't exist, add it
         console.log("Adding assigned_user_id column to todos table...")
 
         await migrationClient.execute(`
           ALTER TABLE todos
-          ADD COLUMN assigned_user_id INTEGER REFERENCES users(id);
+          ADD COLUMN assigned_user_id TEXT REFERENCES neon_auth.users_sync(id);
         `)
 
         console.log("assigned_user_id column added successfully!")
-      } else {
-        console.log("assigned_user_id column already exists.")
       }
 
       // Check if due_date column exists
@@ -176,10 +194,43 @@ export async function runMigrations() {
       }
     }
 
+    // Check if users table exists and drop it if it does since we're using neon_auth.users_sync now
+    const usersTableExists = await migrationClient.execute(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        AND table_name = 'users'
+      );
+    `)
+
+    if (usersTableExists.rows[0]?.exists) {
+      console.log("Dropping users table since we're using neon_auth.users_sync...")
+      
+      // First drop any references from todos table if they exist
+      const referencesExist = await migrationClient.execute(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.table_constraints
+          WHERE constraint_type = 'FOREIGN KEY'
+          AND table_schema = 'public'
+          AND table_name = 'todos'
+          AND constraint_name LIKE '%assigned_user_id%'
+        );
+      `)
+      
+      if (referencesExist.rows[0]?.exists) {
+        await migrationClient.execute(`
+          ALTER TABLE todos DROP CONSTRAINT IF EXISTS todos_assigned_user_id_fkey;
+        `)
+      }
+      
+      // Now drop the users table
+      await migrationClient.execute(`DROP TABLE IF EXISTS users;`)
+      console.log("users table dropped successfully!")
+    }
+
     return true
   } catch (error) {
     console.error("Migration failed:", error)
     return false
   }
 }
-

@@ -49,6 +49,7 @@ import { Card, CardTitle, CardHeader, CardDescription, CardFooter } from "@/comp
 export function SettingsPageClient({
 	contactChannels: serverContactChannels,
 	planId,
+	todoMetrics,
 }: {
 	contactChannels: Array<{
 		id: string
@@ -59,6 +60,12 @@ export function SettingsPageClient({
 		usedForAuth: boolean
 	}>
 	planId: StripePlanId
+	todoMetrics: {
+		todosCreated: number
+		todoLimit: number
+		remaining: number
+		subscription: string
+	} | null
 }) {
 	const user = useUser({ or: "redirect" })
 	const formRef = useRef<HTMLFormElement>(null)
@@ -185,6 +192,21 @@ export function SettingsPageClient({
 						<div className="space-y-4 mt-4">
 							<div className="space-y-2">
 								<div className="flex items-center justify-between text-sm">
+									<span>Todos</span>
+									<span className="font-medium">
+										{todoMetrics
+											? `${todoMetrics.todosCreated} / ${todoMetrics.todoLimit}`
+											: "Loading..."}
+									</span>
+								</div>
+								<Progress
+									value={todoMetrics ? (todoMetrics.todosCreated / todoMetrics.todoLimit) * 100 : 0}
+									className="h-2"
+								/>
+							</div>
+
+							<div className="space-y-2">
+								<div className="flex items-center justify-between text-sm">
 									<span>Storage</span>
 									<span className="font-medium">{"4.2 GB / 5 GB"}</span>
 								</div>
@@ -224,6 +246,25 @@ export function SettingsPageClient({
 
 					{isPro ? (
 						<div className="space-y-4 mt-4">
+							<div className="space-y-2">
+								<div className="flex items-center justify-between text-sm">
+									<span>Todos</span>
+									<span className="font-medium">
+										{todoMetrics
+											? `${todoMetrics.todosCreated} / ${todoMetrics.todoLimit}`
+											: "Loading..."}
+									</span>
+								</div>
+								<Progress
+									value={
+										todoMetrics?.todoLimit
+											? (todoMetrics.todosCreated / todoMetrics.todoLimit) * 100
+											: 0
+									}
+									className="h-2"
+								/>
+							</div>
+
 							<div className="space-y-2">
 								<div className="flex items-center justify-between text-sm">
 									<span>Storage</span>
