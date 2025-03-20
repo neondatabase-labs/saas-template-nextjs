@@ -265,6 +265,23 @@ export async function deleteProject(id: number) {
   }
 }
 
+export async function bulkDeleteTodos(ids: number[]) {
+  // Filter out any negative IDs (optimistic todos)
+  const validIds = ids.filter((id) => id > 0)
+
+  if (validIds.length === 0) return { success: false }
+
+  try {
+    await db.delete(todos).where(inArray(todos.id, validIds))
+
+    revalidatePath("/")
+    return { success: true }
+  } catch (error) {
+    console.error("Failed to bulk delete todos:", error)
+    return { error: "Failed to delete todos" }
+  }
+}
+
 export async function bulkToggleCompleted(ids: number[], completed: boolean) {
   // Filter out any negative IDs (optimistic todos)
   const validIds = ids.filter((id) => id > 0)
@@ -313,14 +330,6 @@ export async function getCurrentUserTodosCreated() {
 
 export async function getUserTodoMetrics(userId: string) {
   try {
-    const user = await db.query.users_sync.findFirst({
-      where: eq(users_sync.id, userId)
-    })
-    
-    if (!user) {
-      return { error: "User not found" }
-    }
-    
     // Get or create user metrics
     let userMetrics = await db.query.user_metrics.findFirst({
       where: eq(user_metrics.userId, userId)

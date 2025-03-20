@@ -6,152 +6,45 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
 	addTodo,
 	deleteTodo,
+	bulkDeleteTodos,
 	bulkUpdateDueDate,
 	bulkUpdateProject,
 	bulkToggleCompleted,
 	updateDueDate,
 	updateTodoProject,
 } from "@/lib/actions"
-import { Search, Plus, Trash, X, AlertCircle, Clock, Tag, CalendarIcon } from "lucide-react"
+import {
+	Search,
+	Plus,
+	Trash,
+	X,
+	AlertCircle,
+	Clock,
+	Tag,
+	CalendarIcon,
+	CreditCard,
+	Zap,
+} from "lucide-react"
 import type { Todo, Project } from "@/lib/schema"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import {
-	format,
-	isToday,
-	isTomorrow,
-	isYesterday,
-	isSameDay,
-	compareAsc,
-	isPast,
-	startOfDay,
-} from "date-fns"
+import { format } from "date-fns"
 import {
 	Dialog,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
+	DialogDescription,
+	DialogFooter,
 } from "@/components/ui/dialog"
 import { ProjectSelector } from "./project-selector"
 import { ProjectBadge } from "./project-badge"
 import { Badge } from "@/components/ui/badge"
-// Form submit button
-function SubmitButton() {
-	return (
-		<Button type="submit" size="sm" className="w-full">
-			<Plus className="h-4 w-4 mr-2" />
-			Add Todo
-		</Button>
-	)
-}
+import { createCheckoutSession } from "@/app/app/settings/actions"
+import { Progress } from "@/components/ui/progress"
+import { groupTodosByDueDate } from "./utils"
 
-// Helper function to format date for display
-function formatDateForDisplay(date: Date | null): string {
-	if (!date) return "No Due Date"
-
-	if (isToday(date)) return "Today"
-	if (isTomorrow(date)) return "Tomorrow"
-	if (isYesterday(date)) return "Yesterday"
-
-	return format(date, "EEEE, MMMM d, yyyy")
-}
-
-// Group todos by due date
-function groupTodosByDueDate(
-	todos: Todo[],
-): { date: Date | null; label: string; todos: Todo[]; isPast: boolean }[] {
-	// Sort todos by due date (null dates at the end)
-	const sortedTodos = [...todos].sort((a, b) => {
-		if (!a.dueDate && !b.dueDate) return 0
-		if (!a.dueDate) return 1
-		if (!b.dueDate) return -1
-		return compareAsc(new Date(a.dueDate), new Date(b.dueDate))
-	})
-
-	const groups: {
-		date: Date | null
-		label: string
-		todos: Todo[]
-		isPast: boolean
-	}[] = []
-
-	// Create a map to track which dates we have groups for
-	const dateMap = new Map<string, boolean>()
-
-	// Process todos with due dates
-	const withDueDate = sortedTodos.filter((todo) => todo.dueDate)
-
-	// Group by date
-	withDueDate.forEach((todo) => {
-		const todoDate = todo.dueDate ? new Date(todo.dueDate) : null
-
-		if (!todoDate) return
-
-		// Format date as string for map key
-		const dateKey = todoDate.toDateString()
-		dateMap.set(dateKey, true)
-
-		// Find existing group or create new one
-		const existingGroup = groups.find(
-			(group) => group.date && todoDate && isSameDay(group.date, todoDate),
-		)
-
-		const isPastDue = isPast(todoDate) && !isToday(todoDate)
-
-		if (existingGroup) {
-			existingGroup.todos.push(todo)
-		} else {
-			groups.push({
-				date: todoDate,
-				label: formatDateForDisplay(todoDate),
-				todos: [todo],
-				isPast: isPastDue,
-			})
-		}
-	})
-
-	// Add todos with no due date at the end
-	const withoutDueDate = sortedTodos.filter((todo) => !todo.dueDate)
-
-	// Always ensure we have a "Today" group
-	const today = startOfDay(new Date())
-	const todayKey = today.toDateString()
-
-	if (!dateMap.has(todayKey)) {
-		// Find the right position to insert the Today group
-		const todayIndex = groups.findIndex((group) => group.date && compareAsc(group.date, today) > 0)
-
-		const todayGroup = {
-			date: today,
-			label: "Today",
-			todos: [] as Todo[],
-			isPast: false,
-		}
-
-		if (todayIndex === -1) {
-			// Add at the end (before "No Due Date")
-			groups.push(todayGroup)
-		} else {
-			// Insert at the right position
-			groups.splice(todayIndex, 0, todayGroup)
-		}
-	}
-
-	// Add the "No Due Date" group at the end if there are any
-	if (withoutDueDate.length > 0) {
-		groups.push({
-			date: null,
-			label: "No Due Date",
-			todos: withoutDueDate,
-			isPast: false,
-		})
-	}
-
-	return groups
-}
-
-// Add Todo Form Component
 function AddTodoForm({
 	onAddTodo,
 	onClose,
@@ -282,12 +175,27 @@ function AddTodoForm({
 				</div>
 			</div>
 
-			<SubmitButton />
+			<Button type="submit">
+				<Plus className="h-4 w-4 mr-2" />
+				Add deadline
+			</Button>
 		</form>
 	)
 }
 
-export function TodosPageClient({ todos, projects, totalCreatedTodos }: TodoPageProps) {
+export function TodosPageClient({
+	todos,
+	projects,
+	totalCreatedTodos,
+	todoLimit,
+	isAtCapacity,
+}: {
+	todos: Todo[]
+	projects: Project[]
+	totalCreatedTodos: number
+	todoLimit: number
+	isAtCapacity: boolean
+}) {
 	const [, startTransition] = useTransition()
 	const [searchQuery, setSearchQuery] = useState("")
 	const [selectedTodoIds, setSelectedTodoIds] = useState<Set<number>>(new Set())
@@ -297,6 +205,12 @@ export function TodosPageClient({ todos, projects, totalCreatedTodos }: TodoPage
 	const [selectedProjectFilter, setSelectedProjectFilter] = useState<number | null>(null)
 	const [optimisticProjects, setOptimisticProjects] = useState<Project[]>(projects)
 
+	const [totalCreated, addToTotalCreated] = useOptimistic(
+		totalCreatedTodos,
+		(state, quantity: number = 0) => {
+			return state + quantity
+		},
+	)
 	// Optimistic state management for todos list
 	const [optimisticTodos, updateOptimisticTodos] = useOptimistic(
 		todos,
@@ -365,6 +279,7 @@ export function TodosPageClient({ todos, projects, totalCreatedTodos }: TodoPage
 	function addOptimisticTodo(todo: Todo) {
 		startTransition(() => {
 			// Add to local state
+			addToTotalCreated(1)
 			updateOptimisticTodos({ type: "add", todo })
 		})
 	}
@@ -384,9 +299,7 @@ export function TodosPageClient({ todos, projects, totalCreatedTodos }: TodoPage
 			updateOptimisticTodos({ type: "deleteMany", ids: idsToDelete })
 
 			// Send the actual request
-			idsToDelete.forEach((id) => {
-				deleteTodo(id)
-			})
+			bulkDeleteTodos(idsToDelete)
 		})
 	}
 
@@ -528,30 +441,26 @@ export function TodosPageClient({ todos, projects, totalCreatedTodos }: TodoPage
 
 			{/* Productivity Metrics */}
 			<div className="grid grid-cols-5 gap-4">
-				<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border shadow-sm">
-					<h3 className="text-sm font-medium text-muted-foreground mb-1">Total Created</h3>
-					<div className="flex items-baseline justify-between">
-						<p className="text-2xl font-bold">{totalCreatedTodos}</p>
-						<p className="text-sm text-muted-foreground">lifetime</p>
+				<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border shadow-sm col-span-2">
+					<div className="flex items-center justify-between mb-1">
+						<h3 className="text-sm font-medium text-muted-foreground">Deadlines</h3>
 					</div>
-				</div>
-
-				<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border shadow-sm">
-					<h3 className="text-sm font-medium text-muted-foreground mb-1">Total Progress</h3>
-					<div className="flex items-baseline justify-between">
+					<div className="flex items-baseline justify-between mb-2">
 						<p className="text-2xl font-bold">
-							{completedTodos}/{totalTodos}
+							{totalCreated}/{todoLimit}
 						</p>
-						<p className="text-sm text-muted-foreground">{completionRate}% complete</p>
+						<p className="text-sm text-muted-foreground">
+							{isAtCapacity ? (
+								<span className="text-red-500 dark:text-red-400">Upgrade to create more</span>
+							) : (
+								<span>{todoLimit - totalCreated} remaining</span>
+							)}
+						</p>
 					</div>
-				</div>
-
-				<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border shadow-sm">
-					<h3 className="text-sm font-medium text-muted-foreground mb-1">Completion Rate</h3>
-					<div className="flex items-baseline justify-between">
-						<p className="text-2xl font-bold">{completionRate}%</p>
-						<p className="text-sm text-muted-foreground">{completedTodos} completed</p>
-					</div>
+					<Progress
+						value={(totalCreated / todoLimit) * 100}
+						className={isAtCapacity ? "bg-red-200 dark:bg-red-900" : ""}
+					/>
 				</div>
 			</div>
 
@@ -592,19 +501,76 @@ export function TodosPageClient({ todos, projects, totalCreatedTodos }: TodoPage
 
 				<Dialog modal open={isAddTodoOpen} onOpenChange={setIsAddTodoOpen}>
 					<DialogTrigger asChild>
-						<Button size="sm">New deadline</Button>
+						{isAtCapacity ? (
+							<Button
+								size="sm"
+								variant="outline"
+								className="text-red-500 border-red-200 hover:bg-red-50 dark:border-red-800 dark:hover:bg-red-950 gap-2"
+							>
+								<Zap className="h-4 w-4" />
+								Upgrade to Add More
+							</Button>
+						) : (
+							<Button size="sm">New deadline</Button>
+						)}
 					</DialogTrigger>
 					<DialogContent>
-						<DialogHeader>
-							<DialogTitle>Add New Todo</DialogTitle>
-						</DialogHeader>
-
-						<AddTodoForm
-							onAddTodo={addOptimisticTodo}
-							onClose={() => setIsAddTodoOpen(false)}
-							projects={optimisticProjects}
-							onProjectAdded={handleProjectAdded}
-						/>
+						{isAtCapacity ? (
+							<>
+								<DialogHeader>
+									<DialogTitle>Todo Limit Reached</DialogTitle>
+									<DialogDescription>
+										You've reached your limit of {todoLimit} todos. Upgrade to Pro to create
+										unlimited todos.
+									</DialogDescription>
+								</DialogHeader>
+								<div className="py-6">
+									<div className="rounded-lg border p-4">
+										<div className="flex items-center gap-3">
+											<div className="bg-primary/10 p-2 rounded-full">
+												<Zap className="h-5 w-5 text-primary" />
+											</div>
+											<div>
+												<h3 className="font-semibold">Pro Plan Benefits</h3>
+												<p className="text-sm text-muted-foreground">
+													Unlimited todos and advanced features
+												</p>
+											</div>
+										</div>
+										<ul className="grid gap-2 mt-4 text-sm">
+											<li className="flex items-center gap-2">
+												<Zap className="h-4 w-4 text-primary" />
+												<span>Unlimited todos</span>
+											</li>
+											<li className="flex items-center gap-2">
+												<CalendarIcon className="h-4 w-4 text-primary" />
+												<span>Full date range for planning</span>
+											</li>
+										</ul>
+									</div>
+								</div>
+								<DialogFooter>
+									<form action={createCheckoutSession}>
+										<Button type="submit" className="w-full gap-2">
+											<CreditCard className="h-4 w-4" />
+											Upgrade to Pro
+										</Button>
+									</form>
+								</DialogFooter>
+							</>
+						) : (
+							<>
+								<DialogHeader>
+									<DialogTitle>Add New Todo</DialogTitle>
+								</DialogHeader>
+								<AddTodoForm
+									onAddTodo={addOptimisticTodo}
+									onClose={() => setIsAddTodoOpen(false)}
+									projects={optimisticProjects}
+									onProjectAdded={handleProjectAdded}
+								/>
+							</>
+						)}
 					</DialogContent>
 				</Dialog>
 			</div>
@@ -986,10 +952,4 @@ function TodoDueDateButton({
 			</PopoverContent>
 		</Popover>
 	)
-}
-
-interface TodoPageProps {
-	todos: Todo[]
-	projects: Project[]
-	totalCreatedTodos: number // Total todos created in DB for subscription limits
 }

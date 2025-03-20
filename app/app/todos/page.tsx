@@ -1,18 +1,35 @@
 import { TodosPageClient } from "./page-client"
-import { getTodos, getProjects, getCurrentUserTodosCreated } from "@/lib/actions"
+import { getTodos, getProjects, getUserTodoMetrics } from "@/lib/actions"
+import { stackServerApp } from "@/stack"
 
 export default async function TodosPage() {
-	// Fetch todos, projects, and user's created todos count
+	// Get current user
+	const user = await stackServerApp.getUser()
+
+	// Fetch todos, projects, and user's todo metrics
 	const whenTodos = getTodos()
 	const whenProjects = getProjects()
-	const whenTotalCreatedTodos = getCurrentUserTodosCreated()
+	const whenUserMetrics = user ? getUserTodoMetrics(user.id) : Promise.resolve(null)
+
+	const [todos, projects, userMetrics] = await Promise.all([
+		whenTodos,
+		whenProjects,
+		whenUserMetrics,
+	])
+
+	// Get the total created todos and todo limit from the user metrics
+	const totalCreatedTodos = userMetrics && !("error" in userMetrics) ? userMetrics.todosCreated : 0
+	const todoLimit = userMetrics && !("error" in userMetrics) ? userMetrics.todoLimit : 10
+	const isAtCapacity = totalCreatedTodos >= todoLimit
 
 	return (
 		<div className="container max-w-6xl mx-auto py-8 px-4">
 			<TodosPageClient
-				todos={await whenTodos}
-				projects={await whenProjects}
-				totalCreatedTodos={await whenTotalCreatedTodos}
+				todos={todos}
+				projects={projects}
+				totalCreatedTodos={totalCreatedTodos}
+				todoLimit={todoLimit}
+				isAtCapacity={isAtCapacity}
 			/>
 		</div>
 	)

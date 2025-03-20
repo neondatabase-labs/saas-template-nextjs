@@ -204,22 +204,6 @@ export function SettingsPageClient({
 									className="h-2"
 								/>
 							</div>
-
-							<div className="space-y-2">
-								<div className="flex items-center justify-between text-sm">
-									<span>Storage</span>
-									<span className="font-medium">{"4.2 GB / 5 GB"}</span>
-								</div>
-								<Progress value={84} className="h-2" />
-							</div>
-
-							<div className="space-y-2">
-								<div className="flex items-center justify-between text-sm">
-									<span>Bandwidth</span>
-									<span className="font-medium">{"80 GB / 100 GB"}</span>
-								</div>
-								<Progress value={80} className="h-2" />
-							</div>
 						</div>
 					) : (
 						<ul className="grid gap-2 text-sm mt-4">
@@ -263,22 +247,6 @@ export function SettingsPageClient({
 									}
 									className="h-2"
 								/>
-							</div>
-
-							<div className="space-y-2">
-								<div className="flex items-center justify-between text-sm">
-									<span>Storage</span>
-									<span className="font-medium">{"45.5 GB / 50 GB"}</span>
-								</div>
-								<Progress value={91} className="h-2" />
-							</div>
-
-							<div className="space-y-2">
-								<div className="flex items-center justify-between text-sm">
-									<span>Bandwidth</span>
-									<span className="font-medium">{"650 GB / 1000 GB"}</span>
-								</div>
-								<Progress value={65} className="h-2" />
 							</div>
 						</div>
 					) : (
