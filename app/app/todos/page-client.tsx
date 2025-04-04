@@ -24,6 +24,7 @@ import {
 	CalendarIcon,
 	CreditCard,
 	Zap,
+	MoreVertical,
 } from "lucide-react"
 import type { Todo, Project } from "@/lib/schema"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -44,6 +45,12 @@ import { Badge } from "@/components/ui/badge"
 import { createCheckoutSession } from "@/app/app/settings/actions"
 import { Progress } from "@/components/ui/progress"
 import { groupTodosByDueDate } from "./utils"
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 function AddTodoForm({
 	onAddTodo,
@@ -186,12 +193,10 @@ function AddTodoForm({
 export function TodosPageClient({
 	todos,
 	projects,
-	totalCreatedTodos,
 	todoLimit,
 }: {
 	todos: Todo[]
 	projects: Project[]
-	totalCreatedTodos: number
 	todoLimit: number
 }) {
 	const [, startTransition] = useTransition()
@@ -202,13 +207,6 @@ export function TodosPageClient({
 	const [isAddTodoOpen, setIsAddTodoOpen] = useState(false)
 	const [selectedProjectFilter, setSelectedProjectFilter] = useState<number | null>(null)
 	const [optimisticProjects, setOptimisticProjects] = useState<Project[]>(projects)
-
-	const [totalCreated, addToTotalCreated] = useOptimistic(
-		totalCreatedTodos,
-		(state, quantity: number = 0) => {
-			return state + quantity
-		},
-	)
 
 	// Optimistic state management for todos list
 	const [optimisticTodos, updateOptimisticTodos] = useOptimistic(
@@ -264,8 +262,6 @@ export function TodosPageClient({
 	// Add a new todo optimistically
 	function addOptimisticTodo(todo: Todo) {
 		startTransition(() => {
-			// Add to local state
-			addToTotalCreated(1)
 			updateOptimisticTodos({ type: "add", todo })
 		})
 	}
@@ -273,7 +269,7 @@ export function TodosPageClient({
 	// Delete multiple todos optimistically
 	function deleteSelectedTodos() {
 		const idsToDelete = Array.from(selectedTodoIds)
-		// Remove deleted todos from selection
+
 		setSelectedTodoIds((prev) => {
 			const newSet = new Set(prev)
 			idsToDelete.forEach((id) => newSet.delete(id))
@@ -281,10 +277,7 @@ export function TodosPageClient({
 		})
 
 		startTransition(() => {
-			// Update optimistically
 			updateOptimisticTodos({ type: "deleteMany", ids: idsToDelete })
-
-			// Send the actual request
 			bulkDeleteTodos(idsToDelete)
 		})
 	}
@@ -789,10 +782,7 @@ export function TodosPageClient({
 													)}
 
 													<div className="flex items-center">
-														<TodoDueDateButton
-															todo={todo}
-															updateOptimisticTodos={updateOptimisticTodos}
-														/>
+														<span />
 													</div>
 
 													<div className="flex items-center gap-2 justify-end">
@@ -829,15 +819,30 @@ export function TodosPageClient({
 															)}
 														</ProjectSelector>
 
-														<Button
-															variant="ghost"
-															size="icon"
-															className="h-6 w-6 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-															onClick={() => handleDeleteTodo(todo.id)}
-															aria-label="Delete todo"
-														>
-															<Trash className="h-3.5 w-3.5" />
-														</Button>
+														<DropdownMenu>
+															<DropdownMenuTrigger asChild>
+																<Button
+																	variant="ghost"
+																	size="icon"
+																	className="h-6 w-6 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+																	aria-label="More options"
+																>
+																	<MoreVertical className="h-3.5 w-3.5" />
+																</Button>
+															</DropdownMenuTrigger>
+															<DropdownMenuContent align="end">
+																<DropdownMenuItem asChild>
+																	<TodoDueDateButton
+																		todo={todo}
+																		updateOptimisticTodos={updateOptimisticTodos}
+																	/>
+																</DropdownMenuItem>
+																<DropdownMenuItem onClick={() => handleDeleteTodo(todo.id)}>
+																	<Trash className="h-3.5 w-3.5 mr-2" />
+																	Delete
+																</DropdownMenuItem>
+															</DropdownMenuContent>
+														</DropdownMenu>
 													</div>
 												</div>
 											)
@@ -874,21 +879,22 @@ function TodoDueDateButton({
 	const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
 	return (
-		<Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+		<Popover modal open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
 			<PopoverTrigger asChild>
-				<Button variant="outline" className="h-6 px-2 text-xs text-muted-foreground">
-					<CalendarIcon className="h-3 w-3 mr-1" />
+				<DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+					<CalendarIcon className="h-3.5 w-3.5 mr-2" />
 					{todo.dueDate ? (
 						<span>
+							Due{" "}
 							{new Date(todo.dueDate).toLocaleDateString("en-US", {
 								month: "short",
 								day: "numeric",
 							})}
 						</span>
 					) : (
-						<span>Due date</span>
+						<span>Set due date</span>
 					)}
-				</Button>
+				</DropdownMenuItem>
 			</PopoverTrigger>
 			<PopoverContent className="w-auto p-0" align="end">
 				<div className="p-2 border-b">
