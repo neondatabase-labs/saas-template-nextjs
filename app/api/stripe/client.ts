@@ -4,6 +4,7 @@
 import { createStripeCustomer, getStripeCustomer, getStripeCustomerId, stripe } from "@/lib/stripe"
 import { redirect } from "next/navigation"
 
+// TODO: do we put this in the DB?
 const plans = [
 	{ id: "FREE", priceId: undefined, todoLimit: 10, todoDaysBehind: 0, todoDaysAhead: 30 },
 	{ id: "PRO", priceId: process.env.STRIPE_PRO_PRICE_ID, todoLimit: 1000, todoDaysBehind: Infinity, todoDaysAhead: Infinity },
