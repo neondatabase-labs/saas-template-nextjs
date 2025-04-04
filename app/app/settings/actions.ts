@@ -179,10 +179,6 @@ export async function makePrimaryContactChannel(formData: FormData) {
 		},
 	}).then((res) => res.json())
 
-	if (!response.success) {
-		throw new Error(response.error)
-	}
-
 	void revalidatePath("/app/settings")
 }
 

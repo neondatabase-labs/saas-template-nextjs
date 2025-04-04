@@ -15,7 +15,7 @@ import {
 	Trash2,
 	TrashIcon,
 } from "lucide-react"
-import { useOptimistic, useRef, useState } from "react"
+import { startTransition, useOptimistic, useRef, useState } from "react"
 import { useUser } from "@/stack-client"
 import Image from "next/image"
 import { ImageInput } from "@/components/image-input"
@@ -73,6 +73,7 @@ export function SettingsPageClient({
 	const [passwordError, setPasswordError] = useState<string | null>(null)
 	const [deleteError, setDeleteError] = useState<string | null>(null)
 	const [showNewPassword, setShowNewPassword] = useState(false)
+	const [pendingVerificationId, setPendingVerificationId] = useState<string | null>(null)
 
 	const [contactChannels, sendChannelEvent] = useOptimistic(
 		serverContactChannels,
@@ -341,13 +342,23 @@ export function SettingsPageClient({
 										)
 									) : (
 										<form
-											action={async (formData) => {
-												await sendVerificationEmail(formData)
+											onSubmit={(e) => {
+												e.preventDefault()
+												const formData = new FormData(e.currentTarget)
+												setPendingVerificationId(channel.id)
+												startTransition(() => {
+													sendVerificationEmail(formData)
+												})
 											}}
 										>
 											<input type="hidden" name="id" value={channel.id} />
-											<Button type="submit" variant="outline" size="sm">
-												Verify
+											<Button
+												type="submit"
+												variant="outline"
+												size="sm"
+												disabled={pendingVerificationId === channel.id}
+											>
+												{pendingVerificationId === channel.id ? "Check your email" : "Verify"}
 											</Button>
 										</form>
 									)}
