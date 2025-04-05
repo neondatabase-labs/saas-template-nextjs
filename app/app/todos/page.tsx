@@ -3,18 +3,12 @@ import { getTodos, getProjects, getUserTodoMetrics } from "@/lib/actions"
 import { stackServerApp } from "@/stack"
 
 export default async function TodosPage() {
-	// Get current user
 	const user = await stackServerApp.getUser()
 
-	// Fetch todos, projects, and user's todo metrics
-	const whenTodos = getTodos()
-	const whenProjects = getProjects()
-	const whenUserMetrics = user ? getUserTodoMetrics(user.id) : Promise.resolve(null)
-
 	const [todos, projects, userMetrics] = await Promise.all([
-		whenTodos,
-		whenProjects,
-		whenUserMetrics,
+		getTodos(),
+		getProjects(),
+		user ? getUserTodoMetrics(user.id) : Promise.resolve(null),
 	])
 
 	// Get the total created todos and todo limit from the user metrics

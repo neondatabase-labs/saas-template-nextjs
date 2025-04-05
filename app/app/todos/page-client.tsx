@@ -147,7 +147,7 @@ function AddTodoForm({
 				</ProjectSelector>
 
 				<div className="flex items-center gap-2">
-					<Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+					<Popover modal open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
 						<PopoverTrigger asChild>
 							<Button type="button" variant="outline" size="xs">
 								<CalendarIcon className="h-4 w-4 mr-2" />
