@@ -51,6 +51,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { cn } from "@/lib/utils"
 
 function AddTodoForm({
 	onAddTodo,
@@ -205,7 +206,6 @@ export function TodosPageClient({
 	const [isRescheduleCalendarOpen, setIsRescheduleCalendarOpen] = useState(false)
 	const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>(undefined)
 	const [isAddTodoOpen, setIsAddTodoOpen] = useState(false)
-	const [selectedProjectFilter, setSelectedProjectFilter] = useState<number | null>(null)
 	const [optimisticProjects, setOptimisticProjects] = useState<Project[]>(projects)
 
 	// Optimistic state management for todos list
@@ -380,11 +380,11 @@ export function TodosPageClient({
 		optimisticTodos.length > 0 && optimisticTodos.every((todo) => selectedTodoIds.has(todo.id))
 
 	const selectedTodos = optimisticTodos.filter((todo) => selectedTodoIds.has(todo.id))
-	// Find the selected project for display
-	const selectedProject =
-		selectedProjectFilter !== null
-			? optimisticProjects.find((p) => p.id === selectedProjectFilter)
-			: null
+
+	// Filter todos based on search query and project filter
+	const filteredTodos = optimisticTodos.filter((todo) => {
+		return todo.text.toLowerCase().includes(searchQuery.toLowerCase())
+	})
 
 	// Add a function to handle single todo deletion
 	function handleDeleteTodo(id: number) {
@@ -409,12 +409,6 @@ export function TodosPageClient({
 			<div className="flex justify-between items-center">
 				<div className="flex items-center gap-3">
 					<h1 className="text-2xl font-semibold">Deadlines</h1>
-					{selectedProject && (
-						<div className="flex items-center gap-2">
-							<span className="text-muted-foreground">in</span>
-							<ProjectBadge project={selectedProject} />
-						</div>
-					)}
 				</div>
 			</div>
 
@@ -454,28 +448,6 @@ export function TodosPageClient({
 						onChange={(e) => setSearchQuery(e.target.value)}
 						className="pl-8 h-8"
 					/>
-				</div>
-
-				<div className="flex gap-2">
-					<ProjectSelector
-						projects={optimisticProjects}
-						selectedProjectId={selectedProjectFilter}
-						onSelectProject={setSelectedProjectFilter}
-						onProjectAdded={handleProjectAdded}
-						asChild
-					>
-						{selectedProject ? (
-							<Button variant="outline" size="sm">
-								<Tag className="h-3 w-3" />
-								<span>{selectedProject.name}</span>
-							</Button>
-						) : (
-							<Button variant="outline" size="sm">
-								<Tag className="h-3 w-3 " />
-								<span>Project</span>
-							</Button>
-						)}
-					</ProjectSelector>
 				</div>
 
 				<Dialog modal open={isAddTodoOpen} onOpenChange={setIsAddTodoOpen}>
@@ -683,30 +655,27 @@ export function TodosPageClient({
 								</label>
 							</div>
 							<div className="text-sm text-muted-foreground">
-								{optimisticTodos.length} item
-								{optimisticTodos.length !== 1 ? "s" : ""}
+								{filteredTodos.length} item
+								{filteredTodos.length !== 1 ? "s " : " "}
+								{filteredTodos.length !== optimisticTodos.length && (
+									<span>matching {searchQuery}</span>
+								)}
 							</div>
 						</>
 					)}
 				</div>
 
 				{/* Todo Groups */}
-				{optimisticTodos.length === 0 && !searchQuery && !selectedProjectFilter ? (
+				{optimisticTodos.length === 0 && !searchQuery ? (
 					<p className="text-center text-muted-foreground py-4">No todos yet. Add one above!</p>
-				) : optimisticTodos.length === 0 ? (
-					<p className="text-center text-muted-foreground py-4">
-						{selectedProjectFilter !== null
-							? "No todos in this project"
-							: "No todos match your search"}
-					</p>
+				) : filteredTodos.length === 0 ? (
+					<p className="text-center text-muted-foreground py-4">No todos match your search</p>
 				) : (
 					<div className="grid grid-cols-[1fr_auto_auto_auto]">
-						{groupTodosByDueDate(optimisticTodos).map((group) => (
+						{groupTodosByDueDate(filteredTodos).map((group) => (
 							<div key={group.label} className="col-span-4 grid grid-cols-subgrid">
 								{/* Date Header */}
-								<div
-									className={`col-span-4 px-3 py-2 border-t ${group.isPast ? "bg-red-50 dark:bg-red-950" : "bg-muted/30"}`}
-								>
+								<div className={`col-span-4 px-3 py-2 border-t bg-muted/30}`}>
 									<div className="flex items-center justify-between">
 										<div className="flex items-center gap-2">
 											{group.isPast ? (
@@ -731,14 +700,13 @@ export function TodosPageClient({
 								{group.todos.length > 0 ? (
 									<div className="contents">
 										{group.todos.map((todo) => {
-											const showPastDue = group.isPast && !todo.completed
 											const project = optimisticProjects.find((p) => p.id === todo.projectId)
 											return (
 												<div
 													key={todo.id}
 													className={`grid grid-cols-subgrid col-span-4 px-2 py-1.5 gap-4 ${
 														todo.completed ? "bg-muted/30" : ""
-													} hover:bg-muted/20 relative group border-b`}
+													} hover:bg-muted/20 relative group`}
 												>
 													<div className="flex items-center gap-2">
 														<div className="flex items-center h-5 pt-0.5">
@@ -756,33 +724,11 @@ export function TodosPageClient({
 															<span
 																className={`text-sm block truncate ${
 																	todo.completed ? "line-through text-muted-foreground" : ""
-																} ${showPastDue ? "text-red-600 dark:text-red-400" : ""}`}
+																} `}
 															>
 																{todo.text}
 															</span>
 														</div>
-													</div>
-
-													{todo.completed ? (
-														<Badge
-															variant="outline"
-															className=" bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
-														>
-															Done
-														</Badge>
-													) : showPastDue ? (
-														<Badge
-															variant="outline"
-															className=" bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-														>
-															Overdue
-														</Badge>
-													) : (
-														<span />
-													)}
-
-													<div className="flex items-center">
-														<span />
 													</div>
 
 													<div className="flex items-center gap-2 justify-end">
@@ -806,50 +752,49 @@ export function TodosPageClient({
 														>
 															{project ? (
 																<button>
-																	<ProjectBadge project={project} className="mr-2" />
+																	<ProjectBadge project={project} className=" w-full" />
 																</button>
 															) : (
-																<Button
-																	variant="outline"
-																	className="h-6 px-2 text-xs text-muted-foreground"
-																>
-																	<Tag className="h-3 w-3 mr-1" />
-																	<span>Project</span>
-																</Button>
+																<button>
+																	<Badge className="h-6 px-2 w-full text-xs text-muted-foreground bg-white border border-border">
+																		<span className="w-2 h-2 rounded-full mr-1.5 bg-neutral-700" />
+																		Project
+																	</Badge>
+																</button>
 															)}
 														</ProjectSelector>
-
-														<DropdownMenu>
-															<DropdownMenuTrigger asChild>
-																<Button
-																	variant="ghost"
-																	size="icon"
-																	className="h-6 w-6 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-																	aria-label="More options"
-																>
-																	<MoreVertical className="h-3.5 w-3.5" />
-																</Button>
-															</DropdownMenuTrigger>
-															<DropdownMenuContent align="end">
-																<DropdownMenuItem asChild>
-																	<TodoDueDateButton
-																		todo={todo}
-																		updateOptimisticTodos={updateOptimisticTodos}
-																	/>
-																</DropdownMenuItem>
-																<DropdownMenuItem onClick={() => handleDeleteTodo(todo.id)}>
-																	<Trash className="h-3.5 w-3.5 mr-2" />
-																	Delete
-																</DropdownMenuItem>
-															</DropdownMenuContent>
-														</DropdownMenu>
 													</div>
+
+													<DropdownMenu>
+														<DropdownMenuTrigger asChild>
+															<Button
+																variant="ghost"
+																size="icon"
+																className="h-6 w-6 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+																aria-label="More options"
+															>
+																<MoreVertical className="h-3.5 w-3.5" />
+															</Button>
+														</DropdownMenuTrigger>
+														<DropdownMenuContent align="end">
+															<DropdownMenuItem asChild>
+																<TodoDueDateButton
+																	todo={todo}
+																	updateOptimisticTodos={updateOptimisticTodos}
+																/>
+															</DropdownMenuItem>
+															<DropdownMenuItem onClick={() => handleDeleteTodo(todo.id)}>
+																<Trash className="h-3.5 w-3.5 mr-2" />
+																Delete
+															</DropdownMenuItem>
+														</DropdownMenuContent>
+													</DropdownMenu>
 												</div>
 											)
 										})}
 									</div>
 								) : (
-									<div className="py-3 px-4 text-center text-sm text-muted-foreground italic">
+									<div className="py-2 px-2 text-sm text-muted-foreground italic">
 										{group.label === "Today"
 											? "Nothing due today"
 											: `No items due ${group.label.toLowerCase()}`}
