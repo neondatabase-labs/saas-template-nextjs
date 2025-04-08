@@ -138,8 +138,6 @@ export async function deleteContactChannel(formData: FormData) {
 		},
 	}).then((res) => res.json())
 
-	console.log(response)
-
 	if (!response.success) {
 		throw new Error(response.error)
 	}
