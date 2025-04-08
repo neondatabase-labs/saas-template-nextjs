@@ -7,7 +7,6 @@ export type QueueTask =
   | { type: "updateDueDate"; key: `update-due-date-${string}`; ids: number[]; dueDate: string | null }
   | { type: "updateProject"; key: `update-project-${string}`; ids: number[]; projectId: number | null }
   | { type: "toggleCompleted"; key: `toggle-completed-${string}`; ids: number[]; completed: boolean }
-  | { type: "updateAssignedUser"; key: `update-assigned-user-${string}`; ids: number[]; assignedUserId: string | null }
 
 export async function POST(req: Request) {
   const signature = req.headers.get("upstash-signature")

@@ -3,7 +3,6 @@ import { processDeleteTodos } from "@/actions/delete-todos"
 import { processDueDate } from "@/actions/update-due-date"
 import { processProject } from "@/actions/update-project"
 import { processToggleCompleted } from "@/actions/toggle-completed"
-import { processAssignedUser } from "@/actions/update-assigned-user"
 
 export type QueueTask = 
   | { type: "deleteTodo"; key: `delete-todo-${number}`; id: number }
@@ -11,7 +10,6 @@ export type QueueTask =
   | { type: "updateDueDate"; key: `update-due-date-${string}`; ids: number[]; dueDate: string | null }
   | { type: "updateProject"; key: `update-project-${string}`; ids: number[]; projectId: number | null }
   | { type: "toggleCompleted"; key: `toggle-completed-${string}`; ids: number[]; completed: boolean }
-  | { type: "updateAssignedUser"; key: `update-assigned-user-${string}`; ids: number[]; assignedUserId: string | null }
 
 export async function processTask(task: QueueTask) {
   try {
@@ -27,9 +25,6 @@ export async function processTask(task: QueueTask) {
         break
       case "toggleCompleted":
         await processToggleCompleted(task.ids, { completed: task.completed })
-        break
-      case "updateAssignedUser":
-        await processAssignedUser(task.ids, { assignedUserId: task.assignedUserId })
         break
       default: {
         throw new Error(`Unknown task type: ${task.type}`)
