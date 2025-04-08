@@ -1,7 +1,7 @@
 "use client"
 
 import { ComponentProps, useState } from "react"
-import { Check, Plus, Tag } from "lucide-react"
+import { Check, Plus } from "lucide-react"
 import type { Project } from "@/lib/schema"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
@@ -23,8 +23,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { addProject } from "@/lib/actions"
-import { cn } from "@/lib/utils"
+import { addProject } from "@/actions/manage-projects"
 
 export function ProjectSelector({
 	projects,
@@ -55,7 +54,10 @@ export function ProjectSelector({
 	]
 
 	async function handleAddProject(formData: FormData) {
-		const result = await addProject(formData)
+		const name = formData.get("name") as string
+		const color = formData.get("color") as string
+
+		const result = await addProject({ name, color })
 
 		if (result.success && result.project && onProjectAdded) {
 			onProjectAdded(result.project)

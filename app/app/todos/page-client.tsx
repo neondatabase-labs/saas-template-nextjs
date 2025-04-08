@@ -3,16 +3,11 @@ import { useOptimistic, useTransition, useState, startTransition } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-	addTodo,
-	deleteTodo,
-	bulkDeleteTodos,
-	bulkUpdateDueDate,
-	bulkUpdateProject,
-	bulkToggleCompleted,
-	updateDueDate,
-	updateTodoProject,
-} from "@/lib/actions"
+import { addTodo } from "@/lib/actions"
+import { deleteTodo, bulkDeleteTodos } from "@/actions/delete-todos"
+import { updateDueDate, bulkUpdateDueDate } from "@/actions/update-due-date"
+import { updateTodoProject, bulkUpdateProject } from "@/actions/update-project"
+import { bulkToggleCompleted } from "@/actions/toggle-completed"
 import {
 	Search,
 	Plus,
@@ -299,7 +294,7 @@ export function TodosPageClient({
 			setIsRescheduleCalendarOpen(false)
 
 			// Send the actual request
-			bulkUpdateDueDate(idsToReschedule, date || null)
+			bulkUpdateDueDate(idsToReschedule, { dueDate: date?.toISOString() || null })
 		})
 	}
 
@@ -318,7 +313,7 @@ export function TodosPageClient({
 			})
 
 			// Send the actual request
-			bulkUpdateProject(idsToMove, projectId)
+			bulkUpdateProject(idsToMove, { projectId })
 		})
 	}
 
@@ -337,7 +332,7 @@ export function TodosPageClient({
 			})
 
 			// Send the actual request
-			bulkToggleCompleted(idsToToggle, completed)
+			bulkToggleCompleted(idsToToggle, { completed })
 		})
 	}
 
@@ -743,7 +738,7 @@ export function TodosPageClient({
 																		projectId,
 																	})
 																	// Then send the actual request
-																	updateTodoProject(todo.id, projectId)
+																	updateTodoProject(todo.id, { projectId })
 																})
 															}}
 															onProjectAdded={handleProjectAdded}
@@ -859,7 +854,7 @@ function TodoDueDateButton({
 								// Close the calendar
 								setIsCalendarOpen(false)
 								// Then send the actual request
-								updateDueDate(todo.id, date || null)
+								updateDueDate(todo.id, { dueDate: date?.toISOString() || null })
 							})
 						}}
 						initialFocus
@@ -877,7 +872,7 @@ function TodoDueDateButton({
 									ids: [todo.id],
 									dueDate: null,
 								})
-								updateDueDate(todo.id, null)
+								updateDueDate(todo.id, { dueDate: null })
 								setIsCalendarOpen(false)
 							})
 						}}

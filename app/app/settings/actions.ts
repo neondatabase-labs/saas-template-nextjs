@@ -165,7 +165,7 @@ export async function makePrimaryContactChannel(formData: FormData) {
 
 	// If user makes GitHub account, it prepopulates with initial contact channel
 	// if the user deletes it, StackAuth still lets them log in, so no need to guard against that.
-	const response = await fetch(`https://api.stack-auth.com/api/v1/contact-channels/me/${id}`, {
+	await fetch(`https://api.stack-auth.com/api/v1/contact-channels/me/${id}`, {
 		method: "PATCH",
 		// we'll treat all primary contact channels as used for auth
 		body: JSON.stringify({ is_primary: true, used_for_auth: true }),
@@ -221,16 +221,6 @@ export async function sendVerificationEmail(formData: FormData) {
 	}
 
 	void revalidatePath("/app/settings")
-
-	// const contactChannels = await user.listContactChannels()
-
-	// const contactChannel = contactChannels.find(channel => channel.id === id)
-
-	// if (!contactChannel) {
-	//   throw new Error("Contact channel not found")
-	// }
-
-	// await contactChannel.sendVerificationEmail()
 }
 
 // Moved from account/page.tsx
@@ -262,8 +252,6 @@ export async function verifyContactChannel({ code }: { code: string }) {
 		throw new Error(response.error)
 	}
 }
-
-
 	
 export async function createCheckoutSession() {
 	const user = await stackServerApp.getUser()
