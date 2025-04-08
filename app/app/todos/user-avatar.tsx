@@ -1,7 +1,6 @@
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import type { User } from "@/lib/schema"
 import { cn } from "@/lib/utils"
 
 export function UserAvatar({
@@ -10,7 +9,10 @@ export function UserAvatar({
 	showName = false,
 	onClick,
 }: {
-	user: User
+	user: {
+		name: string | null
+		avatarUrl: string | null
+	}
 	className?: string
 	showName?: boolean
 	onClick?: () => void
@@ -25,10 +27,7 @@ export function UserAvatar({
 				.substring(0, 2)
 		: "??"
 
-	const avatarUrl =
-		user.raw_json && typeof user.raw_json === "object" && "avatarUrl" in user.raw_json
-			? (user.raw_json.avatarUrl as string)
-			: ""
+	const avatarUrl = user.avatarUrl
 
 	return (
 		<div

@@ -35,7 +35,15 @@ export function UserSelector({
 			<PopoverTrigger asChild>
 				<Button variant="outline" role="combobox" aria-expanded={open} className={triggerClassName}>
 					{selectedUser ? (
-						<UserAvatar user={selectedUser} showName className="mr-2" />
+						<UserAvatar
+							user={{
+								name: selectedUser.name,
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any
+								avatarUrl: (selectedUser.raw_json as any)?.avatarUrl,
+							}}
+							showName
+							className="mr-2"
+						/>
 					) : (
 						<>
 							<User className="h-4 w-4 mr-2" />
@@ -74,7 +82,14 @@ export function UserSelector({
 										}}
 									>
 										<div className="flex items-center gap-2 w-full">
-											<UserAvatar user={user} showName />
+											<UserAvatar
+												user={{
+													name: user.name,
+													// eslint-disable-next-line @typescript-eslint/no-explicit-any
+													avatarUrl: (user.raw_json as any)?.avatarUrl,
+												}}
+												showName
+											/>
 											{user.id === selectedUserId && <Check className="h-4 w-4 ml-auto" />}
 										</div>
 									</CommandItem>
