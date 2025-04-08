@@ -15,7 +15,7 @@ export async function getTodos() {
   }
 
   try {
-    return await db.$withAuth(accessToken).select().from(todos).orderBy(todos.id)
+    return await db.select().from(todos).orderBy(todos.id)
   } catch (error) {
     console.error("Failed to fetch todos:", error)
     return []
