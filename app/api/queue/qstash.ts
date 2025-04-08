@@ -55,6 +55,9 @@ export async function publishTask<T extends QueueTask>(task: T) {
     url: url.toString(),
     body: task,
     deduplicationId: task.key,
+    headers: {
+      'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET!,
+    }
   })
 
   return job
