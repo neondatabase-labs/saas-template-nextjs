@@ -1,5 +1,5 @@
-import { text, boolean, pgTable, serial, timestamp, integer, jsonb } from "drizzle-orm/pg-core"
-import { relations } from "drizzle-orm"
+import { text, boolean, pgTable, serial, timestamp, integer, jsonb, pgPolicy } from "drizzle-orm/pg-core"
+import { relations, sql } from "drizzle-orm"
 
 export const projects = pgTable("projects", {
   id: serial("id").primaryKey(),
@@ -34,8 +34,26 @@ export const todos = pgTable("todos", {
   completed: boolean("completed").default(false).notNull(),
   dueDate: timestamp("due_date"),
   projectId: integer("project_id").references(() => projects.id),
-  assignedUserId: text("assigned_user_id").references(() => users_sync.id),
-})
+  userId: text("user_id").references(() => users_sync.id),
+}, () => ({
+  p1: pgPolicy("view todos", {
+    for: "select",
+    to: "authenticated",
+    using: sql`(select auth.user_id() = user_id)`,
+  }),
+
+  p2: pgPolicy("update todos", {
+    for: "update",
+    to: "authenticated",
+    using: sql`(select auth.user_id() = user_id)`,
+  }),
+
+  p3: pgPolicy("delete todos", {
+    for: "delete",
+    to: "authenticated",
+    using: sql`(select auth.user_id() = user_id)`,
+  }),
+}))
 
 // Define relations
 export const projectsRelations = relations(projects, ({ many }) => ({
@@ -60,8 +78,8 @@ export const todosRelations = relations(todos, ({ one }) => ({
     fields: [todos.projectId],
     references: [projects.id],
   }),
-  assignedUser: one(users_sync, {
-    fields: [todos.assignedUserId],
+  user: one(users_sync, {
+    fields: [todos.userId],
     references: [users_sync.id],
     relationName: "assignedTodos",
   }),

@@ -87,7 +87,7 @@ function AddTodoForm({
 			completed: false,
 			dueDate: selectedDueDate || null,
 			projectId: selectedProjectId,
-			assignedUserId: null,
+			userId: null,
 		}
 
 		// Add optimistic todo to the UI

@@ -5,11 +5,17 @@ import { db } from "./db"
 import { todos, projects, users_sync, user_metrics } from "./schema"
 import { eq, desc, count, isNull } from "drizzle-orm"
 import { getStripePlan } from "@/app/api/stripe/client"
-import { stackServerApp } from "@/stack"
+import { stackServerApp, getAccessToken } from "@/stack"
+import { cookies } from "next/headers"
 
 export async function getTodos() {
+  const accessToken = await getAccessToken(await cookies())
+  if (!accessToken) {
+    throw new Error("Not authenticated")
+  }
+
   try {
-    return await db.select().from(todos).orderBy(todos.id)
+    return await db.$withAuth(accessToken).select().from(todos).orderBy(todos.id)
   } catch (error) {
     console.error("Failed to fetch todos:", error)
     return []
@@ -96,8 +102,13 @@ export async function addTodo(formData: FormData) {
 }
 
 export async function getTotalCreatedTodos() {
+  const accessToken = await getAccessToken(await cookies())
+  if (!accessToken) {
+    throw new Error("Not authenticated")
+  }
+
   try {
-    const result = await db.select({ count: count() }).from(todos)
+    const result = await db.$withAuth(accessToken).select({ count: count() }).from(todos)
     return result[0]?.count ?? 0
   } catch (error) {
     console.error("Failed to count todos:", error)
