@@ -6,7 +6,10 @@ export const projects = pgTable("projects", {
   name: text("name").notNull(),
   color: text("color").notNull().default("#4f46e5"), // Default indigo color
   createdAt: timestamp("created_at").defaultNow().notNull(),
-})
+  ownerId: text("owner_id"),
+}, () => ({
+  ownerFk: sql`FOREIGN KEY ("owner_id") REFERENCES "neon_auth"."users_sync"("id")`,
+}))
 
 // Define the neon_auth schema users_sync table
 export const users_sync = pgTable("neon_auth.users_sync", {
@@ -22,11 +25,13 @@ export const users_sync = pgTable("neon_auth.users_sync", {
 // Separate table to track user metrics
 export const user_metrics = pgTable("user_metrics", {
   id: serial("id").primaryKey(),
-  userId: text("user_id").notNull().references(() => users_sync.id),
+  userId: text("user_id"),
   todosCreated: integer("todos_created").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-})
+}, () => ({
+  userFk: sql`FOREIGN KEY ("user_id") REFERENCES "neon_auth"."users_sync"("id")`,
+}))
 
 export const todos = pgTable("todos", {
   id: serial("id").primaryKey(),
@@ -35,23 +40,25 @@ export const todos = pgTable("todos", {
   dueDate: timestamp("due_date"),
   projectId: integer("project_id").references(() => projects.id),
   userId: text("user_id").references(() => users_sync.id),
+  ownerId: text("owner_id"),
 }, () => ({
+  ownerFk: sql`FOREIGN KEY ("owner_id") REFERENCES "neon_auth"."users_sync"("id")`,
   p1: pgPolicy("view todos", {
     for: "select",
     to: "authenticated",
-    using: sql`(select auth.user_id() = user_id)`,
+    using: sql`(select auth.user_id() = owner_id)`,
   }),
 
   p2: pgPolicy("update todos", {
     for: "update",
     to: "authenticated",
-    using: sql`(select auth.user_id() = user_id)`,
+    using: sql`(select auth.user_id() = owner_id)`,
   }),
 
   p3: pgPolicy("delete todos", {
     for: "delete",
     to: "authenticated",
-    using: sql`(select auth.user_id() = user_id)`,
+    using: sql`(select auth.user_id() = owner_id)`,
   }),
 }))
 

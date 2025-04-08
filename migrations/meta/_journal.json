@@ -15,6 +15,34 @@
       "when": 1744092167944,
       "tag": "0001_curvy_gorilla_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1744093754690,
+      "tag": "0002_powerful_may_parker",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1744093860725,
+      "tag": "0003_magical_nitro",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1744094136737,
+      "tag": "0004_wide_stick",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1744094365269,
+      "tag": "0005_new_zaran",
+      "breakpoints": true
     }
   ]
 }
