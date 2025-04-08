@@ -48,7 +48,6 @@ const client = new Client({
 })
 
 export async function publishTask<T extends QueueTask>(task: T) {
-  console.log("Publishing task:", process.env.VERCEL_URL)
   const url = new URL(`https://${process.env.VERCEL_URL}/api/queue`)
 
   const job = await client.publishJSON({
@@ -56,6 +55,8 @@ export async function publishTask<T extends QueueTask>(task: T) {
     body: task,
     deduplicationId: task.key,
     headers: {
+      // Allows the queue to work in preview environments
+      // https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation
       'x-vercel-protection-bypass': process.env.VERCEL_AUTOMATION_BYPASS_SECRET!,
     }
   })
