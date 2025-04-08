@@ -16,12 +16,19 @@ export function UserAvatar({
 	onClick?: () => void
 }) {
 	// Get initials from name
-	const initials = user.name
-		.split(" ")
-		.map((part) => part[0])
-		.join("")
-		.toUpperCase()
-		.substring(0, 2)
+	const initials = user?.name
+		? user.name
+				.split(" ")
+				.map((part) => part[0])
+				.join("")
+				.toUpperCase()
+				.substring(0, 2)
+		: "??"
+
+	const avatarUrl =
+		user.raw_json && typeof user.raw_json === "object" && "avatarUrl" in user.raw_json
+			? (user.raw_json.avatarUrl as string)
+			: ""
 
 	return (
 		<div
@@ -29,7 +36,7 @@ export function UserAvatar({
 			onClick={onClick}
 		>
 			<Avatar className="h-6 w-6">
-				<AvatarImage src={user.avatarUrl || ""} alt={user.name} />
+				<AvatarImage src={avatarUrl || ""} alt={user.name || ""} />
 				<AvatarFallback>{initials}</AvatarFallback>
 			</Avatar>
 			{showName && <span className="text-xs font-medium">{user.name}</span>}

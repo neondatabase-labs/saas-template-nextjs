@@ -22,8 +22,8 @@ export function UserSelector({
 	triggerClassName,
 }: {
 	users: UserType[]
-	selectedUserId: number | null
-	onSelectUser: (userId: number | null) => void
+	selectedUserId: string | null
+	onSelectUser: (userId: string | null) => void
 	triggerClassName?: string
 }) {
 	const [open, setOpen] = useState(false)

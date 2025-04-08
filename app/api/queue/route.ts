@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server"
-import {  processTask} from "@/app/api/queue/qstash"
+import { processTask} from "@/app/api/queue/qstash"
 import { Receiver } from "@upstash/qstash"
 
 export type QueueTask = 
@@ -15,11 +14,11 @@ export async function POST(req: Request) {
   const body = await req.text()
   
   if (!signature) {
-    return NextResponse.json({ error: "No signature" }, { status: 401 })
+    return Response.json({ error: "No signature" }, { status: 401 })
   }
 
   if (!body) {
-    return NextResponse.json({ error: "No body" }, { status: 401 })
+    return Response.json({ error: "No body" }, { status: 401 })
   }
 
   const receiver = new Receiver({
@@ -33,9 +32,11 @@ export async function POST(req: Request) {
   })
 
   if (!isValid) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+    return Response.json({ error: "Invalid signature" }, { status: 401 })
   }
 
   const task = JSON.parse(body) as QueueTask
-  return processTask(task)
+  await processTask(task)
+
+  return Response.json({ message: "Task processed" }, { status: 200 })
 } 
