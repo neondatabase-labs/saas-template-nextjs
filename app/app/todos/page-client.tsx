@@ -1,18 +1,13 @@
 "use client"
-import { useOptimistic, useTransition, useState, startTransition } from "react"
+import { useOptimistic, useTransition, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-	addTodo,
-	deleteTodo,
-	bulkDeleteTodos,
-	bulkUpdateDueDate,
-	bulkUpdateProject,
-	bulkToggleCompleted,
-	updateDueDate,
-	updateTodoProject,
-} from "@/lib/actions"
+import { addTodo } from "@/lib/actions"
+import { deleteTodo, bulkDeleteTodos } from "@/actions/delete-todos"
+import { updateDueDate, bulkUpdateDueDate } from "@/actions/update-due-date"
+import { updateTodoProject, bulkUpdateProject } from "@/actions/update-project"
+import { bulkToggleCompleted } from "@/actions/toggle-completed"
 import {
 	Search,
 	Plus,
@@ -207,141 +202,131 @@ export function TodosPageClient({
 	const [isAddTodoOpen, setIsAddTodoOpen] = useState(false)
 	const [optimisticProjects, setOptimisticProjects] = useState<Project[]>(projects)
 
-	// Optimistic state management for todos list
+	// Track pending bulk edits
+	type PendingEdit =
+		| { type: "delete"; ids: Set<number> }
+		| { type: "reschedule"; ids: Set<number>; dueDate: Date | null }
+		| { type: "moveToProject"; ids: Set<number>; projectId: number | null }
+		| { type: "toggleCompleted"; ids: Set<number>; completed: boolean }
+
+	const [pendingEdits, setPendingEdits] = useState<PendingEdit[]>([])
+
+	// Optimistic state management for single-todo actions
 	const [optimisticTodos, updateOptimisticTodos] = useOptimistic(
 		todos,
-		(
-			state,
-			action:
-				| { type: "add"; todo: Todo }
-				| { type: "delete"; id: number }
-				| { type: "deleteMany"; ids: number[] }
-				| { type: "reschedule"; ids: number[]; dueDate: Date | null }
-				| { type: "moveToProject"; ids: number[]; projectId: number | null }
-				| { type: "toggleCompleted"; ids: number[]; completed: boolean },
-		) => {
+		(state, action: { type: "add"; todo: Todo } | { type: "delete"; id: number }) => {
 			if (action.type === "add") {
 				return [...state, action.todo]
 			} else if (action.type === "delete") {
 				return state.filter((todo) => todo.id !== action.id)
-			} else if (action.type === "deleteMany") {
-				return state.filter((todo) => !action.ids.includes(todo.id))
-			} else if (action.type === "reschedule") {
-				return state.map((todo) => {
-					if (action.ids.includes(todo.id)) {
-						return { ...todo, dueDate: action.dueDate }
-					}
-					return todo
-				})
-			} else if (action.type === "moveToProject") {
-				return state.map((todo) => {
-					if (action.ids.includes(todo.id)) {
-						return { ...todo, projectId: action.projectId }
-					}
-					return todo
-				})
-			} else if (action.type === "toggleCompleted") {
-				return state.map((todo) => {
-					if (action.ids.includes(todo.id)) {
-						return { ...todo, completed: action.completed }
-					}
-					return todo
-				})
 			}
 			return state
 		},
 	)
 
-	// Calculate metrics
-	const totalTodos = optimisticTodos.length
+	// Apply pending edits to todos
+	const displayedTodos = optimisticTodos
+		.map((todo) => {
+			const current = { ...todo }
 
-	// Check if at capacity based on current todos count
-	const isCurrentlyAtCapacity = totalTodos >= todoLimit
+			for (const edit of pendingEdits) {
+				if (!edit.ids.has(todo.id)) continue
 
-	// Add a new todo optimistically
-	function addOptimisticTodo(todo: Todo) {
-		startTransition(() => {
-			updateOptimisticTodos({ type: "add", todo })
+				switch (edit.type) {
+					case "delete":
+						return null
+					case "reschedule":
+						current.dueDate = edit.dueDate
+						break
+					case "moveToProject":
+						current.projectId = edit.projectId
+						break
+					case "toggleCompleted":
+						current.completed = edit.completed
+						break
+				}
+			}
+
+			return current
 		})
-	}
+		.filter((todo): todo is Todo => todo !== null)
 
-	// Delete multiple todos optimistically
+	// Delete multiple todos
 	function deleteSelectedTodos() {
 		const idsToDelete = Array.from(selectedTodoIds)
 
-		setSelectedTodoIds((prev) => {
-			const newSet = new Set(prev)
-			idsToDelete.forEach((id) => newSet.delete(id))
-			return newSet
-		})
+		setPendingEdits((prev) => [...prev, { type: "delete", ids: new Set(idsToDelete) }])
+		setSelectedTodoIds(new Set())
 
-		startTransition(() => {
-			updateOptimisticTodos({ type: "deleteMany", ids: idsToDelete })
-			bulkDeleteTodos(idsToDelete)
-		})
+		// Send the actual request
+		bulkDeleteTodos(idsToDelete)
 	}
 
-	// Reschedule multiple todos optimistically
+	// Reschedule multiple todos
 	function rescheduleSelectedTodos(date: Date | undefined) {
 		const idsToReschedule = Array.from(selectedTodoIds)
 
 		if (idsToReschedule.length === 0) return
 
-		startTransition(() => {
-			// Update optimistically
-			updateOptimisticTodos({
+		setPendingEdits((prev) => [
+			...prev,
+			{
 				type: "reschedule",
-				ids: idsToReschedule,
+				ids: new Set(idsToReschedule),
 				dueDate: date || null,
-			})
+			},
+		])
 
-			// Close calendar but don't clear selection
-			setIsRescheduleCalendarOpen(false)
+		// Close calendar but don't clear selection
+		setIsRescheduleCalendarOpen(false)
 
-			// Send the actual request
-			bulkUpdateDueDate(idsToReschedule, date || null)
-		})
+		// Send the actual request
+		bulkUpdateDueDate(idsToReschedule, { dueDate: date?.toISOString() || null })
 	}
 
-	// Move multiple todos to a project optimistically
+	// Move multiple todos to a project
 	function moveSelectedTodosToProject(projectId: number | null) {
 		const idsToMove = Array.from(selectedTodoIds)
 
 		if (idsToMove.length === 0) return
 
-		startTransition(() => {
-			// Update optimistically
-			updateOptimisticTodos({
+		setPendingEdits((prev) => [
+			...prev,
+			{
 				type: "moveToProject",
-				ids: idsToMove,
+				ids: new Set(idsToMove),
 				projectId,
-			})
+			},
+		])
 
-			// Send the actual request
-			bulkUpdateProject(idsToMove, projectId)
-		})
+		// Send the actual request
+		bulkUpdateProject(idsToMove, { projectId })
 	}
 
-	// Mark multiple todos as completed/uncompleted optimistically
+	// Mark multiple todos as completed/uncompleted
 	function markSelectedTodosAs(completed: boolean) {
 		const idsToToggle = Array.from(selectedTodoIds)
 
 		if (idsToToggle.length === 0) return
 
-		startTransition(() => {
-			// Update optimistically
-			updateOptimisticTodos({
+		setPendingEdits((prev) => [
+			...prev,
+			{
 				type: "toggleCompleted",
-				ids: idsToToggle,
+				ids: new Set(idsToToggle),
 				completed,
-			})
+			},
+		])
 
-			// Send the actual request
-			bulkToggleCompleted(idsToToggle, completed)
-		})
+		// Send the actual request
+		bulkToggleCompleted(idsToToggle, { completed })
 	}
 
-	// Toggle selection of a todo
+	// Calculate metrics based on displayed todos
+	const totalTodos = displayedTodos.length
+	const isCurrentlyAtCapacity = totalTodos >= todoLimit
+
+	// Select or deselect a todo
 	function toggleTodoSelection(id: number, selected: boolean) {
 		setSelectedTodoIds((prev) => {
 			const newSet = new Set(prev)
@@ -359,7 +344,7 @@ export function TodosPageClient({
 		if (selected) {
 			// Select all visible todos
 			const newSelection = new Set(selectedTodoIds)
-			optimisticTodos.forEach((todo) => {
+			displayedTodos.forEach((todo) => {
 				newSelection.add(todo.id)
 			})
 			setSelectedTodoIds(newSelection)
@@ -376,12 +361,12 @@ export function TodosPageClient({
 
 	// Check if all visible todos are selected
 	const allSelected =
-		optimisticTodos.length > 0 && optimisticTodos.every((todo) => selectedTodoIds.has(todo.id))
+		displayedTodos.length > 0 && displayedTodos.every((todo) => selectedTodoIds.has(todo.id))
 
-	const selectedTodos = optimisticTodos.filter((todo) => selectedTodoIds.has(todo.id))
+	const selectedTodos = displayedTodos.filter((todo) => selectedTodoIds.has(todo.id))
 
 	// Filter todos based on search query and project filter
-	const filteredTodos = optimisticTodos.filter((todo) => {
+	const filteredTodos = displayedTodos.filter((todo) => {
 		return todo.text.toLowerCase().includes(searchQuery.toLowerCase())
 	})
 
@@ -514,7 +499,11 @@ export function TodosPageClient({
 									<DialogTitle>Add New Todo</DialogTitle>
 								</DialogHeader>
 								<AddTodoForm
-									onAddTodo={addOptimisticTodo}
+									onAddTodo={(todo) =>
+										startTransition(() => {
+											updateOptimisticTodos({ type: "add", todo })
+										})
+									}
 									onClose={() => setIsAddTodoOpen(false)}
 									projects={optimisticProjects}
 									onProjectAdded={handleProjectAdded}
@@ -535,7 +524,7 @@ export function TodosPageClient({
 							<div className="flex items-center gap-2 h-8">
 								<Checkbox
 									id="select-all"
-									checked={allSelected && optimisticTodos.length > 0}
+									checked={allSelected && displayedTodos.length > 0}
 									onCheckedChange={toggleSelectAll}
 									className="data-[state=checked]:bg-blue-600 data-[state=checked]:text-white data-[state=checked]:border-blue-600"
 								/>
@@ -645,7 +634,7 @@ export function TodosPageClient({
 							<div className="flex items-center gap-2 h-8">
 								<Checkbox
 									id="select-all"
-									checked={allSelected && optimisticTodos.length > 0}
+									checked={allSelected && displayedTodos.length > 0}
 									onCheckedChange={toggleSelectAll}
 									className="data-[state=checked]:bg-blue-600 data-[state=checked]:text-white data-[state=checked]:border-blue-600"
 								/>
@@ -656,7 +645,7 @@ export function TodosPageClient({
 							<div className="text-sm text-muted-foreground">
 								{filteredTodos.length} item
 								{filteredTodos.length !== 1 ? "s " : " "}
-								{filteredTodos.length !== optimisticTodos.length && (
+								{filteredTodos.length !== displayedTodos.length && (
 									<span>matching {searchQuery}</span>
 								)}
 							</div>
@@ -665,7 +654,7 @@ export function TodosPageClient({
 				</div>
 
 				{/* Todo Groups */}
-				{optimisticTodos.length === 0 && !searchQuery ? (
+				{displayedTodos.length === 0 && !searchQuery ? (
 					<p className="text-center text-muted-foreground py-4">No todos yet. Add one above!</p>
 				) : filteredTodos.length === 0 ? (
 					<p className="text-center text-muted-foreground py-4">No todos match your search</p>
@@ -735,16 +724,18 @@ export function TodosPageClient({
 															projects={optimisticProjects}
 															selectedProjectId={todo.projectId}
 															onSelectProject={(projectId: number | null) => {
-																startTransition(() => {
-																	// First update optimistically
-																	updateOptimisticTodos({
+																// First update optimistically
+																setPendingEdits((prev) => [
+																	...prev,
+																	{
 																		type: "moveToProject",
-																		ids: [todo.id],
+																		ids: new Set([todo.id]),
 																		projectId,
-																	})
-																	// Then send the actual request
-																	updateTodoProject(todo.id, projectId)
-																})
+																	},
+																])
+
+																// Then send the actual request
+																updateTodoProject(todo.id, { projectId })
 															}}
 															onProjectAdded={handleProjectAdded}
 															asChild
@@ -779,7 +770,24 @@ export function TodosPageClient({
 															<DropdownMenuItem asChild>
 																<TodoDueDateButton
 																	todo={todo}
-																	updateOptimisticTodos={updateOptimisticTodos}
+																	onSelect={(date) => {
+																		startTransition(() => {
+																			// First update optimistically
+																			setPendingEdits((prev) => [
+																				...prev,
+																				{
+																					type: "reschedule",
+																					ids: new Set([todo.id]),
+																					dueDate: date || null,
+																				},
+																			])
+																			// Close the calendar
+																			// Then send the actual request
+																			updateDueDate(todo.id, {
+																				dueDate: date?.toISOString() || null,
+																			})
+																		})
+																	}}
 																/>
 															</DropdownMenuItem>
 															<DropdownMenuItem onClick={() => handleDeleteTodo(todo.id)}>
@@ -811,14 +819,10 @@ export function TodosPageClient({
 // Helper component for the Todo's due date button and popover
 function TodoDueDateButton({
 	todo,
-	updateOptimisticTodos,
+	onSelect,
 }: {
 	todo: Todo
-	updateOptimisticTodos: (action: {
-		type: "reschedule"
-		ids: number[]
-		dueDate: Date | null
-	}) => void
+	onSelect: (date: Date | null) => void
 }) {
 	const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 
@@ -849,18 +853,8 @@ function TodoDueDateButton({
 						mode="single"
 						selected={todo.dueDate ? new Date(todo.dueDate) : undefined}
 						onSelect={(date: Date | undefined) => {
-							startTransition(() => {
-								// First update optimistically
-								updateOptimisticTodos({
-									type: "reschedule",
-									ids: [todo.id],
-									dueDate: date || null,
-								})
-								// Close the calendar
-								setIsCalendarOpen(false)
-								// Then send the actual request
-								updateDueDate(todo.id, date || null)
-							})
+							onSelect(date || null)
+							setIsCalendarOpen(false)
 						}}
 						initialFocus
 					/>
@@ -871,15 +865,7 @@ function TodoDueDateButton({
 						size="sm"
 						className="w-full"
 						onClick={() => {
-							startTransition(() => {
-								updateOptimisticTodos({
-									type: "reschedule",
-									ids: [todo.id],
-									dueDate: null,
-								})
-								updateDueDate(todo.id, null)
-								setIsCalendarOpen(false)
-							})
+							onSelect(null)
 						}}
 					>
 						Clear due date

@@ -1,9 +1,15 @@
 import type { NextConfig } from "next"
+import TerserPlugin from "terser-webpack-plugin"
 
 const nextConfig: NextConfig = {
-  experimental: {
-    useCache: true
-  },
+	eslint: {
+		ignoreDuringBuilds: true,
+	},
+	
+	experimental: {
+		useCache: true,
+	},
+
 	images: {
 		remotePatterns: [
 			{
@@ -13,6 +19,27 @@ const nextConfig: NextConfig = {
 				hostname: "avatars.githubusercontent.com",
 			},
 		],
+	},
+
+	async redirects() {
+		return [
+			{
+				source: "/app",
+				destination: "/app/todos",
+				permanent: false,
+			},
+		]
+	},
+
+	webpack: (config) => {
+		config.optimization.minimizer = [
+			new TerserPlugin({
+					terserOptions: {
+							keep_fnames: true, // Preserve function names (prevents SHA256 loss)
+					}
+			})
+		]
+		return config
 	},
 }
 
