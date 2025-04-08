@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { db } from "./db"
 import { todos, projects, users_sync, user_metrics } from "./schema"
 import { eq, desc, count, isNull } from "drizzle-orm"
-import { getStripePlan } from "@/app/api/stripe/client"
+import { getStripePlan } from "@/app/api/stripe/plans"
 import { stackServerApp, getAccessToken } from "@/stack"
 import { cookies } from "next/headers"
 

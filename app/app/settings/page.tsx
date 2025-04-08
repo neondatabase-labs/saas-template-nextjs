@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import { stackServerApp } from "@/stack"
-import { getStripePlan } from "@/app/api/stripe/client"
+import { getStripePlan } from "@/app/api/stripe/plans"
 import { SettingsPageClient } from "./page-client"
 import { verifyContactChannel } from "./actions"
 import { getTodos, getUserTodoMetrics } from "@/lib/actions"

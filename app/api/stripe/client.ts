@@ -1,44 +1,20 @@
 /**
  * This is the file you should edit to add Stripe features to your project.
  */
-import { createStripeCustomer, getStripeCustomer, getStripeCustomerId, stripe } from "@/lib/stripe"
+import { createStripeCustomer, getStripeCustomerId, stripe } from "@/lib/stripe"
 import { redirect } from "next/navigation"
-
-// TODO: do we put this in the DB?
-const plans = [
-	{ id: "FREE", priceId: undefined, todoLimit: 10, todoDaysBehind: 0, todoDaysAhead: 30 },
-	{ id: "PRO", priceId: process.env.STRIPE_PRO_PRICE_ID, todoLimit: 1000, todoDaysBehind: Infinity, todoDaysAhead: Infinity },
-] as const 
-
-export type StripePlanId = (typeof plans)[number]["id"]
-
-export async function getStripePlan(userId: string) {
-	const freePlan = plans.find((plan) => plan.priceId === undefined) ?? plans[0]
-	
-  const customerId = await getStripeCustomerId(userId)
-  if (!customerId) {
-    return freePlan
-	}
-
-  const subData = await getStripeCustomer(customerId)
-  if (!subData || subData.status !== "active") {
-    // Inactive subscriptions happen after canceling, once the billing period ends
-    return freePlan
-  }
-
-  return plans.find((plan) => plan.priceId === subData.priceId) ?? freePlan
-}
+import { plansFlag } from "./plans"
 
 export async function redirectToCheckout({
-  userId,
-  email,
-  name,
+	userId,
+	email,
+	name,
 }: {
-  userId: string
-  email: string
-  name?: string | null
+	userId: string
+	email: string
+	name?: string | null
 }) {
-  const customerId = await getStripeCustomerId(userId)
+	const customerId = await getStripeCustomerId(userId)
 	let stripeCustomerId = customerId
 
 	if (!stripeCustomerId) {
@@ -50,18 +26,19 @@ export async function redirectToCheckout({
 		})
 		stripeCustomerId = customer.id
 	}
-  
+	
+	const plans = await plansFlag()
 	const checkoutSession = await stripe.checkout.sessions.create({
 		customer: stripeCustomerId,
 		line_items: [
 			{
-				price: process.env.STRIPE_PRO_PRICE_ID,
+				price: plans.find((plan) => plan.id === "PRO")?.priceId,
 				quantity: 1,
 			},
 		],
 		mode: "subscription",
-		success_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/stripe`,
-		cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/stripe`,
+		success_url: `${process.env.NEXT_PUBLIC_VERCEL_URL}/api/stripe`,
+		cancel_url: `${process.env.NEXT_PUBLIC_VERCEL_URL}/api/stripe`,
 		metadata: {
 			userId,
 		},
@@ -75,11 +52,11 @@ export async function redirectToCheckout({
 }
 
 export async function redirectToBillingPortal({
-  userId,
+	userId,
 }: {
-  userId: string
+	userId: string
 }) {
-  const customerId = await getStripeCustomerId(userId)
+	const customerId = await getStripeCustomerId(userId)
 	if (!customerId) {
 		throw new Error("Customer not found")
 	}

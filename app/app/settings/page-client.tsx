@@ -19,7 +19,6 @@ import { startTransition, useOptimistic, useRef, useState } from "react"
 import { useUser } from "@/stack-client"
 import Image from "next/image"
 import { ImageInput } from "@/components/image-input"
-import type { StripePlanId } from "@/app/api/stripe/client"
 import {
 	updatePassword,
 	deleteAccount,
@@ -59,7 +58,7 @@ export function SettingsPageClient({
 		isVerified: boolean
 		usedForAuth: boolean
 	}>
-	planId: StripePlanId
+	planId: string
 	todoMetrics: {
 		todosCreated: number
 		todoLimit: number
