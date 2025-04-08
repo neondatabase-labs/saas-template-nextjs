@@ -48,10 +48,9 @@ const client = new Client({
 })
 
 export async function publishTask<T extends QueueTask>(task: T) {
-  const url = new URL(process.env.VERCEL_URL!)
-  url.pathname = `/api/queue`
+  console.log("Publishing task:", process.env.VERCEL_URL)
+  const url = new URL(`https://${process.env.VERCEL_URL}/api/queue`)
 
-  console.log("Publishing task:", url.toString())
   const job = await client.publishJSON({
     url: url.toString(),
     body: task,
