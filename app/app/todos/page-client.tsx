@@ -264,16 +264,10 @@ export function TodosPageClient({
 	function deleteSelectedTodos() {
 		const idsToDelete = Array.from(selectedTodoIds)
 
-		setSelectedTodoIds((prev) => {
-			const newSet = new Set(prev)
-			idsToDelete.forEach((id) => newSet.delete(id))
-			return newSet
-		})
+		setSelectedTodoIds(new Set())
 
-		startTransition(() => {
-			updateOptimisticTodos({ type: "deleteMany", ids: idsToDelete })
-			bulkDeleteTodos(idsToDelete)
-		})
+		// Send the actual request
+		bulkDeleteTodos(idsToDelete)
 	}
 
 	// Reschedule multiple todos optimistically
@@ -282,20 +276,11 @@ export function TodosPageClient({
 
 		if (idsToReschedule.length === 0) return
 
-		startTransition(() => {
-			// Update optimistically
-			updateOptimisticTodos({
-				type: "reschedule",
-				ids: idsToReschedule,
-				dueDate: date || null,
-			})
+		// Close calendar but don't clear selection
+		setIsRescheduleCalendarOpen(false)
 
-			// Close calendar but don't clear selection
-			setIsRescheduleCalendarOpen(false)
-
-			// Send the actual request
-			bulkUpdateDueDate(idsToReschedule, { dueDate: date?.toISOString() || null })
-		})
+		// Send the actual request
+		bulkUpdateDueDate(idsToReschedule, { dueDate: date?.toISOString() || null })
 	}
 
 	// Move multiple todos to a project optimistically
@@ -304,17 +289,8 @@ export function TodosPageClient({
 
 		if (idsToMove.length === 0) return
 
-		startTransition(() => {
-			// Update optimistically
-			updateOptimisticTodos({
-				type: "moveToProject",
-				ids: idsToMove,
-				projectId,
-			})
-
-			// Send the actual request
-			bulkUpdateProject(idsToMove, { projectId })
-		})
+		// Send the actual request
+		bulkUpdateProject(idsToMove, { projectId })
 	}
 
 	// Mark multiple todos as completed/uncompleted optimistically
@@ -323,17 +299,8 @@ export function TodosPageClient({
 
 		if (idsToToggle.length === 0) return
 
-		startTransition(() => {
-			// Update optimistically
-			updateOptimisticTodos({
-				type: "toggleCompleted",
-				ids: idsToToggle,
-				completed,
-			})
-
-			// Send the actual request
-			bulkToggleCompleted(idsToToggle, { completed })
-		})
+		// Send the actual request
+		bulkToggleCompleted(idsToToggle, { completed })
 	}
 
 	// Toggle selection of a todo
