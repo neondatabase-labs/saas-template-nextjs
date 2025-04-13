@@ -1,27 +1,55 @@
-import { getStripeCustomerId, getStripeCustomer } from '@/lib/stripe'
-import { flag } from 'flags/next'
+import { getStripeCustomerId, getStripeCustomer } from "@/lib/stripe"
+import { flag } from "flags/next"
 
-// Add new plans here, or edit them in the Vercel Flags Explorer
+// Add new plans here
+const defaultPlans = [
+	{
+		id: "FREE",
+		priceId: undefined,
+		todoLimit: 10,
+		todoDaysBehind: 0,
+		todoDaysAhead: 30,
+	},
+	{
+		id: "PRO",
+		priceId: "price_1R3aDvLxBMFKq9DZn1vkvwwW",
+		todoLimit: 1000,
+		todoDaysBehind: Infinity,
+		todoDaysAhead: Infinity,
+	},
+]
+
 export const plansFlag = flag({
-  key: 'subscription-plans',
-  decide() {
-    return [
-      { 
-        id: "FREE", 
-        priceId: undefined, 
-        todoLimit: 10, 
-        todoDaysBehind: 0, 
-        todoDaysAhead: 30 
-      },
-      { 
-        id: "PRO", 
-        priceId: 'price_1R3aDvLxBMFKq9DZn1vkvwwW', 
-        todoLimit: 1000, 
-        todoDaysBehind: Infinity, 
-        todoDaysAhead: Infinity 
-      },
-    ]
-  },
+	key: "subscription-plans",
+	// Provide other options to the Vercel Flags Explorer for testing
+	options: [
+		{
+			label: "Default",
+			value: defaultPlans,
+		},
+		{
+			label: "Unlimited",
+			value: [
+				{
+					id: "FREE",
+					priceId: undefined,
+					todoLimit: 1_000_000,
+					todoDaysBehind: Infinity,
+					todoDaysAhead: Infinity,
+				},
+				{
+					id: "PRO",
+					priceId: "price_1R3aDvLxBMFKq9DZn1vkvwwW",
+					todoLimit: 1_000_000,
+					todoDaysBehind: Infinity,
+					todoDaysAhead: Infinity,
+				},
+			],
+		},
+	],
+	decide() {
+		return defaultPlans
+	},
 })
 
 export async function getStripePlan(userId: string) {
