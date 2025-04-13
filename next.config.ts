@@ -1,7 +1,7 @@
-import type { NextConfig } from "next"
 import TerserPlugin from "terser-webpack-plugin"
+import { withVercelToolbar } from "@vercel/toolbar/plugins/next"
 
-const nextConfig: NextConfig = {
+export default withVercelToolbar()({
 	eslint: {
 		ignoreDuringBuilds: true,
 	},
@@ -41,6 +41,4 @@ const nextConfig: NextConfig = {
 		]
 		return config
 	},
-}
-
-export default nextConfig
+})

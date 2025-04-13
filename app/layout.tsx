@@ -1,8 +1,11 @@
 import type React from "react"
 
 import "./globals.css"
+import { VercelToolbar } from "@vercel/toolbar/next"
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+	const shouldInjectToolbar = process.env.ENABLE_VERCEL_TOOLBAR === "true"
+
 	return (
 		<html lang="en">
 			<title>Neon Todo App</title>
@@ -11,6 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 				content="A simple todo app built with Next.js, Drizzle ORM, and Neon Serverless"
 			/>
 			<body className="min-h-screen bg-background">{children}</body>
+			{shouldInjectToolbar && <VercelToolbar />}
 		</html>
 	)
 }
