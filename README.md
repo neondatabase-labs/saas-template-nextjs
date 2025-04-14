@@ -1,5 +1,7 @@
 # Neon Auth - Next.js Template App
 
+[Deploy to Vercel](https://vercel.com/new/clone?demo-description=Next.js%20template%20with%20Neon%20Auth%2C%20Stripe%20payments%2C%20Upstash%20KV%2C%20Qstash%20background%20jobs%2C%20and%20shadcn%2Fui%20components&demo-title=Neon%20Auth%20Next.js%20Template&env=NEXT_PUBLIC_STACK_PROJECT_ID,NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY,STACK_SECRET_SERVER_KEY,DATABASE_URL,STRIPE_SECRET_KEY,STRIPE_WEBHOOK_SECRET,KV_URL,KV_REST_API_READ_ONLY_TOKEN,KV_REST_API_TOKEN,KV_REST_API_URL,QSTASH_NEXT_SIGNING_KEY,QSTASH_CURRENT_SIGNING_KEY,QSTASH_URL,QSTASH_TOKEN&envDescription=How%20to%20get%20these%20environment%20variables&envLink=https%3A%2F%2Fgithub.com%2Fjacobparis%2Fneon-auth-nextjs-stripe-template%23environment-variables&project-name=neon-auth-nextjs-stripe-template&repository-name=neon-auth-nextjs-stripe-template&repository-url=https%3A%2F%2Fgithub.com%2Fjacobparis%2Fneon-auth-nextjs-stripe-template&from=templates&stores=%5B%7B%22type%22%3A%22postgres%22%7D%2C%7B%22integrationSlug%22%3A%22upstash%22%2C%22type%22%3A%22integration%22%7D%2C%7B%22integrationSlug%22%3A%22upstash%22%2C%22productSlug%22%3A%22upstash-qstash%22%2C%22type%22%3A%22integration%22%7D%5D&skippable-integrations=1)
+
 ## Authentication
 
 This app uses NeonAuth and StackAuth for user management.
