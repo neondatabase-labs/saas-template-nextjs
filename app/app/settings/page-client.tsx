@@ -49,6 +49,7 @@ export function SettingsPageClient({
 	contactChannels: serverContactChannels,
 	planId,
 	todoMetrics,
+	plans,
 }: {
 	contactChannels: Array<{
 		id: string
@@ -65,6 +66,13 @@ export function SettingsPageClient({
 		remaining: number
 		subscription: string
 	} | null
+	plans: Array<{
+		id: string
+		priceId: string | undefined
+		todoLimit: number
+		todoDaysBehind: number
+		todoDaysAhead: number
+	}>
 }) {
 	const user = useUser({ or: "redirect" })
 	const formRef = useRef<HTMLFormElement>(null)
@@ -186,7 +194,9 @@ export function SettingsPageClient({
 					<div className="flex items-center gap-2">
 						<h2 className="text-xl font-medium">Free Plan</h2>
 					</div>
-					<p className="text-sm text-muted-foreground">Basic features for personal use</p>
+					<p className="text-sm text-muted-foreground">
+						Basic features with up to {plans.find((p) => p.id === "FREE")?.todoLimit ?? 10} todos
+					</p>
 
 					{!isPro ? (
 						<div className="space-y-4 mt-4">
@@ -209,7 +219,7 @@ export function SettingsPageClient({
 						<ul className="grid gap-2 text-sm mt-4">
 							<li className="flex items-center gap-2">
 								<Zap className="h-4 w-4 text-primary" />
-								<span>Unlimited todos</span>
+								<span>Up to {plans.find((p) => p.id === "FREE")?.todoLimit} todos</span>
 							</li>
 							<li className="flex items-center gap-2">
 								<Package className="h-4 w-4 text-primary" />

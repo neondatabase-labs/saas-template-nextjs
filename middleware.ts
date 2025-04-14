@@ -10,6 +10,9 @@ function isProtectedRoute(url: string) {
 export async function middleware(request: NextRequest) {
   // Skip auth check for public routes
   if (isProtectedRoute(request.nextUrl.pathname)) {
+    // We only check the access token for validity, we do not hit the StackAuth API
+    // - middleware is called for every request, so we can't add such latency
+    // - we need to check permissions before fetching/mutating anyway, so we do it in each action
     const userSub = await checkAccessToken(request.cookies)
   
     if (!userSub) {

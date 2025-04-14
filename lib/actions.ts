@@ -153,7 +153,7 @@ export async function getUserTodoMetrics(userId: string) {
     const plan = await getStripePlan(userId)
     
     return { 
-      todosCreated: userMetrics.todosCreated, // Lifetime total (still tracked)
+      todosCreated: userMetrics.todosCreated,
       todoLimit: plan.todoLimit,
       subscription: plan.id
     }

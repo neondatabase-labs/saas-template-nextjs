@@ -4,6 +4,7 @@ import { getStripePlan } from "@/app/api/stripe/plans"
 import { SettingsPageClient } from "./page-client"
 import { verifyContactChannel } from "./actions"
 import { getTodos, getUserTodoMetrics } from "@/lib/actions"
+import { plansFlag } from "@/app/api/stripe/plans"
 
 export default async function SettingsPage({
 	searchParams: searchParamsPromise,
@@ -21,6 +22,7 @@ export default async function SettingsPage({
 
 	const plan = await getStripePlan(user?.id)
 	const contactChannels = await user?.listContactChannels()
+	const plans = await plansFlag()
 
 	// Get user's todo metrics
 	const whenUserMetrics = user ? getUserTodoMetrics(user.id) : Promise.resolve(null)
@@ -49,6 +51,7 @@ export default async function SettingsPage({
 				remaining: todoLimit - todos.length,
 				subscription: plan.id,
 			}}
+			plans={plans}
 		/>
 	)
 }

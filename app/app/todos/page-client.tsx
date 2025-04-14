@@ -391,12 +391,6 @@ export function TodosPageClient({
 
 	return (
 		<div className="space-y-6">
-			<div className="flex justify-between items-center">
-				<div className="flex items-center gap-3">
-					<h1 className="text-2xl font-semibold">Deadlines</h1>
-				</div>
-			</div>
-
 			{/* Productivity Metrics */}
 			<div className="grid grid-cols-5 gap-4">
 				<div className="bg-white dark:bg-gray-800 p-4 rounded-lg border shadow-sm col-span-2">
