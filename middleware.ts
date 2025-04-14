@@ -18,8 +18,11 @@ export async function middleware(request: NextRequest) {
     if (!userSub) {
       return NextResponse.redirect(
         new URL(
-          // TODO: implement this redirect
-          "/handler/login?redirect=" + encodeURIComponent('blag'),
+          "/handler/login?redirect=" + encodeURIComponent(
+            request.nextUrl.pathname.startsWith('/handler') 
+              ? '/todos'
+              : request.nextUrl.pathname + request.nextUrl.search
+          ),
           request.url,
         ),
       )
