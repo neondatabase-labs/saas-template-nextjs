@@ -1,12 +1,8 @@
-import { invariant } from "@epic-web/invariant"
 import { config } from "dotenv"
 import Stripe from "stripe"
 import { spawn } from "child_process"
 
 config()
-
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY
-invariant(STRIPE_SECRET_KEY, "STRIPE_SECRET_KEY is required")
 
 const events: Stripe.WebhookEndpointCreateParams.EnabledEvent[] = [
 	"checkout.session.completed",

@@ -11,7 +11,10 @@
     "start": "run-p start:*",
     "start:next": "next start",
     "start:stripe": "tsx stripe.setup.ts",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@epic-web/invariant": "^1.0.0",
