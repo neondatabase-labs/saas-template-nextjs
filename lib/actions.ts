@@ -1,8 +1,8 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { db } from "./db"
-import { todos, projects, users_sync, user_metrics } from "./schema"
+import { db } from "./db/db"
+import { todos, projects, users_sync, user_metrics } from "./db/schema"
 import { eq, desc, count, isNull } from "drizzle-orm"
 import { getStripePlan } from "@/app/api/stripe/plans"
 import { stackServerApp, getAccessToken } from "@/lib/stack-auth/stack"

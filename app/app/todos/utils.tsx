@@ -1,4 +1,4 @@
-import type { Todo } from "@/lib/schema"
+import type { Todo } from "@/lib/db/schema"
 import {
 	isToday,
 	isTomorrow,

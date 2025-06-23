@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Check, User } from "lucide-react"
-import type { User as UserType } from "@/lib/schema"
+import type { User as UserType } from "@/lib/db/schema"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import {

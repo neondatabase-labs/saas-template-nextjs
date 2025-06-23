@@ -21,7 +21,7 @@ import {
 	Zap,
 	MoreVertical,
 } from "lucide-react"
-import type { Todo, Project } from "@/lib/schema"
+import type { Todo, Project } from "@/lib/db/schema"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"

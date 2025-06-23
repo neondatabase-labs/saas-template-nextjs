@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge"
-import type { Project } from "@/lib/schema"
+import type { Project } from "@/lib/db/schema"
 import { cn } from "@/lib/utils"
 
 export function ProjectBadge({ project, className }: { project: Project; className?: string }) {

@@ -2,7 +2,7 @@
 
 import { ComponentProps, useState } from "react"
 import { Check, Plus } from "lucide-react"
-import type { Project } from "@/lib/schema"
+import type { Project } from "@/lib/db/schema"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Button } from "@/components/ui/button"
 import {

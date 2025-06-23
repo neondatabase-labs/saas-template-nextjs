@@ -1,7 +1,7 @@
 "use server"
 
-import { db } from "@/lib/db"
-import { projects, todos } from "@/lib/schema"
+import { db } from "@/lib/db/db"
+import { projects, todos } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
