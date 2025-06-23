@@ -1,27 +1,23 @@
 "use server"
 
 import { db } from "@/lib/db/db"
-import { todos } from "@/lib/db/schema"
+import { todosTable } from "@/lib/db/schema"
 import { inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { publishTask } from "@/app/api/queue/qstash"
 
-export async function processDueDate(ids: number[], payload: { dueDate: string | null }) {
-	const validIds = ids.filter((id) => id > 0)
-	if (validIds.length === 0) return
+export async function processDueDate(ids: string[], payload: { dueDate: string | null }) {
+	if (ids.length === 0) return
 
 	await db
-		.update(todos)
+		.update(todosTable)
 		.set({ dueDate: payload.dueDate ? new Date(payload.dueDate) : null })
-		.where(inArray(todos.id, validIds))
+		.where(inArray(todosTable.id, ids))
 
 	revalidatePath("/")
 }
 
-export async function updateDueDate(id: number, payload: { dueDate: string | null }) {
-	// Don't try to update optimistic todos
-	if (id < 0) return { success: false }
-
+export async function updateDueDate(id: string, payload: { dueDate: string | null }) {
 	try {
 		await processDueDate([id], payload)
 		return { success: true }
@@ -31,17 +27,14 @@ export async function updateDueDate(id: number, payload: { dueDate: string | nul
 	}
 }
 
-export async function bulkUpdateDueDate(ids: number[], payload: { dueDate: string | null }) {
-	// Filter out any negative IDs (optimistic todos)
-	const validIds = ids.filter((id) => id > 0)
-
-	if (validIds.length === 0) return { success: false }
+export async function bulkUpdateDueDate(ids: string[], payload: { dueDate: string | null }) {
+	if (ids.length === 0) return { success: false }
 
 	try {
 		const job = await publishTask({
 			type: "updateDueDate",
-			key: `update-due-date-${validIds.sort().join("-")}-${payload.dueDate}`,
-			ids: validIds,
+			key: `update-due-date-${ids.sort().join("-")}-${payload.dueDate}`,
+			ids,
 			dueDate: payload.dueDate,
 		})
 

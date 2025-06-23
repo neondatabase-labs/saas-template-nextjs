@@ -1,24 +1,20 @@
 "use server"
 
 import { db } from "@/lib/db/db"
-import { todos } from "@/lib/db/schema"
+import { todosTable } from "@/lib/db/schema"
 import { inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { publishTask } from "@/app/api/queue/qstash"
 
-export async function processDeleteTodos(ids: number[]) {
-	const validIds = ids.filter((id) => id > 0)
-	if (validIds.length === 0) return
+export async function processDeleteTodos(ids: string[]) {
+	if (ids.length === 0) return
 
-	await db.delete(todos).where(inArray(todos.id, validIds))
+	await db.delete(todosTable).where(inArray(todosTable.id, ids))
 
 	revalidatePath("/")
 }
 
-export async function deleteTodo(id: number) {
-	// Don't try to delete optimistic todos
-	if (id < 0) return { success: false }
-
+export async function deleteTodo(id: string) {
 	try {
 		await processDeleteTodos([id])
 		return { success: true }
@@ -28,17 +24,14 @@ export async function deleteTodo(id: number) {
 	}
 }
 
-export async function bulkDeleteTodos(ids: number[]) {
-	// Filter out any negative IDs (optimistic todos)
-	const validIds = ids.filter((id) => id > 0)
-
-	if (validIds.length === 0) return { success: false }
+export async function bulkDeleteTodos(ids: string[]) {
+	if (ids.length === 0) return { success: false }
 
 	try {
 		const job = await publishTask({
 			type: "deleteTodos",
-			key: `delete-todos-${validIds.sort().join("-")}`,
-			ids: validIds,
+			key: `delete-todos-${ids.sort().join("-")}`,
+			ids,
 		})
 
 		return { success: true, jobId: job.messageId }

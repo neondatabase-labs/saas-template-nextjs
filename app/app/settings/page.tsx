@@ -1,10 +1,9 @@
 import { redirect } from "next/navigation"
 import { stackServerApp } from "@/lib/stack-auth/stack"
-import { getStripePlan } from "@/app/api/stripe/plans"
+import { getPlansFlag, getStripePlan } from "@/lib/stripe/plans"
 import { SettingsPageClient } from "./page-client"
 import { verifyContactChannel } from "./actions"
 import { getTodos, getUserTodoMetrics } from "@/lib/actions"
-import { plansFlag } from "@/app/api/stripe/plans"
 
 export default async function SettingsPage({
 	searchParams: searchParamsPromise,
@@ -20,9 +19,9 @@ export default async function SettingsPage({
 		redirect("/app/settings")
 	}
 
-	const plan = await getStripePlan(user?.id)
-	const contactChannels = await user?.listContactChannels()
+	const [userPlan, plansFlag] = await Promise.all([getStripePlan(user?.id), getPlansFlag()])
 	const plans = await plansFlag()
+	const contactChannels = await user?.listContactChannels()
 
 	// Get user's todo metrics
 	const whenUserMetrics = user ? getUserTodoMetrics(user.id) : Promise.resolve(null)
@@ -34,7 +33,7 @@ export default async function SettingsPage({
 
 	return (
 		<SettingsPageClient
-			planId={plan.id}
+			planId={userPlan.id}
 			contactChannels={
 				contactChannels?.map((channel) => ({
 					id: channel.id,
@@ -49,7 +48,7 @@ export default async function SettingsPage({
 				todosCreated: todos.length,
 				todoLimit,
 				remaining: todoLimit - todos.length,
-				subscription: plan.id,
+				subscription: userPlan.id,
 			}}
 			plans={plans}
 		/>

@@ -1,123 +1,145 @@
-import {
-	text,
-	boolean,
-	pgTable,
-	serial,
-	timestamp,
-	integer,
-	jsonb,
-	pgPolicy,
-} from "drizzle-orm/pg-core"
+import { text, boolean, pgTable, timestamp, integer, uuid } from "drizzle-orm/pg-core"
 import { relations, sql } from "drizzle-orm"
+import { usersSync as usersSyncTable } from "drizzle-orm/neon"
 
-export const projects = pgTable(
-	"projects",
-	{
-		id: serial("id").primaryKey(),
-		name: text("name").notNull(),
-		color: text("color").notNull().default("#4f46e5"), // Default indigo color
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		ownerId: text("owner_id"),
-	},
-	() => ({
-		ownerFk: sql`FOREIGN KEY ("owner_id") REFERENCES "neon_auth"."users_sync"("id")`,
-	}),
-)
+export { usersSyncTable }
 
-// Define the neon_auth schema users_sync table
-export const users_sync = pgTable("neon_auth.users_sync", {
-	id: text("id").primaryKey(),
-	email: text("email"),
-	name: text("name"),
-	raw_json: jsonb("raw_json").notNull(),
-	created_at: timestamp("created_at"),
-	deleted_at: timestamp("deleted_at"),
-	updated_at: timestamp("updated_at"),
+// Helper functions for timestamps
+const createdAt = timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+const updatedAt = timestamp("updated_at", { withTimezone: true })
+	.notNull()
+	.defaultNow()
+	.$onUpdate(() => new Date())
+
+export const projectsTable = pgTable("projects", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	name: text("name").notNull(),
+	color: text("color").notNull().default("#4f46e5"), // Default indigo color
+	createdAt,
+	updatedAt,
+	ownerId: text("owner_id").references(() => usersSyncTable.id),
 })
 
 // Separate table to track user metrics
-export const user_metrics = pgTable(
-	"user_metrics",
-	{
-		id: serial("id").primaryKey(),
-		userId: text("user_id"),
-		todosCreated: integer("todos_created").default(0).notNull(),
-		createdAt: timestamp("created_at").defaultNow().notNull(),
-		updatedAt: timestamp("updated_at").defaultNow().notNull(),
-	},
-	() => ({
-		userFk: sql`FOREIGN KEY ("user_id") REFERENCES "neon_auth"."users_sync"("id")`,
-	}),
-)
+export const userMetricsTable = pgTable("user_metrics", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	userId: text("user_id").references(() => usersSyncTable.id),
+	todosCreated: integer("todos_created").default(0).notNull(),
+	createdAt,
+	updatedAt,
+})
 
-export const todos = pgTable(
-	"todos",
-	{
-		id: serial("id").primaryKey(),
-		text: text("text").notNull(),
-		completed: boolean("completed").default(false).notNull(),
-		dueDate: timestamp("due_date"),
-		projectId: integer("project_id").references(() => projects.id),
-		userId: text("user_id").references(() => users_sync.id),
-		ownerId: text("owner_id"),
-	},
-	() => ({
-		ownerFk: sql`FOREIGN KEY ("owner_id") REFERENCES "neon_auth"."users_sync"("id")`,
-		p1: pgPolicy("view todos", {
-			for: "select",
-			to: "authenticated",
-			using: sql`(select auth.user_id() = owner_id)`,
-		}),
+export const todosTable = pgTable("todos", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	text: text("text").notNull(),
+	completed: boolean("completed").default(false).notNull(),
+	dueDate: timestamp("due_date"),
+	projectId: text("project_id").references(() => projectsTable.id),
+	userId: text("user_id").references(() => usersSyncTable.id),
+	ownerId: text("owner_id").references(() => usersSyncTable.id),
+	createdAt,
+	updatedAt,
+})
 
-		p2: pgPolicy("update todos", {
-			for: "update",
-			to: "authenticated",
-			using: sql`(select auth.user_id() = owner_id)`,
-		}),
+export const stripeCustomersTable = pgTable("stripe_customers", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	userId: text("user_id")
+		.notNull()
+		.references(() => usersSyncTable.id),
+	stripeCustomerId: text("stripe_customer_id").notNull(),
+	createdAt,
+	updatedAt,
+})
 
-		p3: pgPolicy("delete todos", {
-			for: "delete",
-			to: "authenticated",
-			using: sql`(select auth.user_id() = owner_id)`,
-		}),
-	}),
-)
+export const SUBSCRIPTION_STATUS = [
+	"active",
+	"canceled",
+	"incomplete",
+	"incomplete_expired",
+	"past_due",
+	"paused",
+	"trialing",
+	"unpaid",
+] as const
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUS)[number]
+
+export const subscriptionsTable = pgTable("subscriptions", {
+	id: uuid("id").defaultRandom().primaryKey(),
+	userId: text("user_id")
+		.notNull()
+		.unique()
+		.references(() => usersSyncTable.id),
+	stripeSubscriptionId: text("stripe_subscription_id").notNull().unique(),
+	stripePriceId: text("stripe_price_id").notNull(),
+	status: text("status", {
+		enum: SUBSCRIPTION_STATUS,
+	}).notNull(),
+	currentPeriodStart: timestamp("current_period_start", { withTimezone: true }).notNull(),
+	currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }).notNull(),
+	cancelAtPeriodEnd: boolean("cancel_at_period_end").notNull().default(false),
+	createdAt,
+	updatedAt,
+})
 
 // Define relations
-export const projectsRelations = relations(projects, ({ many }) => ({
-	todos: many(todos),
+export const projectsRelations = relations(projectsTable, ({ many }) => ({
+	todos: many(todosTable),
 }))
 
-export const usersRelations = relations(users_sync, ({ many }) => ({
-	assignedTodos: many(todos, { relationName: "assignedTodos" }),
-	metrics: many(user_metrics, { relationName: "metrics" }),
+export const usersRelations = relations(usersSyncTable, ({ many }) => ({
+	assignedTodos: many(todosTable, { relationName: "assignedTodos" }),
+	metrics: many(userMetricsTable, { relationName: "metrics" }),
+	projects: many(projectsTable, { relationName: "projects" }),
+	subscriptions: many(subscriptionsTable, { relationName: "subscriptions" }),
+	stripeCustomers: many(stripeCustomersTable, { relationName: "stripeCustomers" }),
 }))
 
-export const userMetricsRelations = relations(user_metrics, ({ one }) => ({
-	user: one(users_sync, {
-		fields: [user_metrics.userId],
-		references: [users_sync.id],
+export const userMetricsRelations = relations(userMetricsTable, ({ one }) => ({
+	user: one(usersSyncTable, {
+		fields: [userMetricsTable.userId],
+		references: [usersSyncTable.id],
 		relationName: "metrics",
 	}),
 }))
 
-export const todosRelations = relations(todos, ({ one }) => ({
-	project: one(projects, {
-		fields: [todos.projectId],
-		references: [projects.id],
+export const todosRelations = relations(todosTable, ({ one }) => ({
+	project: one(projectsTable, {
+		fields: [todosTable.projectId],
+		references: [projectsTable.id],
+		relationName: "todos",
 	}),
-	user: one(users_sync, {
-		fields: [todos.userId],
-		references: [users_sync.id],
+	user: one(usersSyncTable, {
+		fields: [todosTable.userId],
+		references: [usersSyncTable.id],
 		relationName: "assignedTodos",
 	}),
 }))
 
-export type Todo = typeof todos.$inferSelect
-export type NewTodo = typeof todos.$inferInsert
-export type Project = typeof projects.$inferSelect
-export type NewProject = typeof projects.$inferInsert
-export type User = typeof users_sync.$inferSelect
-export type NewUser = typeof users_sync.$inferInsert
-export type UserMetrics = typeof user_metrics.$inferSelect
-export type NewUserMetrics = typeof user_metrics.$inferInsert
+export const stripeCustomersRelations = relations(stripeCustomersTable, ({ one }) => ({
+	user: one(usersSyncTable, {
+		fields: [stripeCustomersTable.userId],
+		references: [usersSyncTable.id],
+		relationName: "stripeCustomers",
+	}),
+}))
+
+export const subscriptionsRelations = relations(subscriptionsTable, ({ one }) => ({
+	user: one(usersSyncTable, {
+		fields: [subscriptionsTable.userId],
+		references: [usersSyncTable.id],
+		relationName: "subscriptions",
+	}),
+}))
+
+export type User = typeof usersSyncTable.$inferSelect
+export type NewUser = typeof usersSyncTable.$inferInsert
+export type Todo = typeof todosTable.$inferSelect
+export type NewTodo = typeof todosTable.$inferInsert
+export type Project = typeof projectsTable.$inferSelect
+export type NewProject = typeof projectsTable.$inferInsert
+export type UserMetrics = typeof userMetricsTable.$inferSelect
+export type NewUserMetrics = typeof userMetricsTable.$inferInsert
+export type StripeCustomer = typeof stripeCustomersTable.$inferSelect
+export type NewStripeCustomer = typeof stripeCustomersTable.$inferInsert
+export type Subscription = typeof subscriptionsTable.$inferSelect
+export type NewSubscription = typeof subscriptionsTable.$inferInsert

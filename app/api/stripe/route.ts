@@ -1,8 +1,9 @@
 import { headers } from "next/headers"
 import { after, NextResponse } from "next/server"
-import { getStripeCustomerId, processStripeEvent, syncStripeDataToKV } from "@/lib/stripe"
+import { processStripeEvent, syncStripeData } from "@/lib/stripe/stripe"
 import { redirect } from "next/navigation"
 import { stackServerApp } from "@/lib/stack-auth/stack"
+import { getStripeCustomer } from "@/lib/db/stripe-customers"
 
 // Send users to GET /api/stripe after they complete the checkout process
 export async function GET() {
@@ -11,9 +12,9 @@ export async function GET() {
 		return new NextResponse("Not authenticated", { status: 401 })
 	}
 
-	const customerId = await getStripeCustomerId(user.id)
-	if (customerId) {
-		await syncStripeDataToKV(customerId)
+	const customer = await getStripeCustomer(user.id)
+	if (customer) {
+		await syncStripeData(customer.stripeCustomerId)
 	}
 
 	redirect("/app/settings")

@@ -57,6 +57,16 @@ First, create a new Stripe account or use an existing one on `https://dashboard.
 
 Navigate to the `Developers` settings and `API keys` section. Copy the `Secret key` and paste it into the `.env` file as the `STRIPE_SECRET_KEY` environment variable.
 
+#### Stripe product and price
+
+Create a new product and price in the Stripe dashboard. Copy the `Price ID` and paste it into the `.env` file as the `STRIPE_PRO_PRICE_ID` environment variable.
+
+```txt
+STRIPE_PRO_PRICE_ID=
+```
+
+Currently, there is only one price (subscription). You can easily extend this setup to include multiple prices by adding them to the `getPlansFlag` function in `lib/stripe/plans.ts`.
+
 #### Stripe webhook listener
 
 Run `npm run dev:stripe` to start the Stripe webhook listener. This will listen for events from Stripe and forward them to the Next.js app. Copy-paste the webhook signing secret into the `.env` file (`STRIPE_WEBHOOK_SECRET`):
@@ -122,6 +132,8 @@ QSTASH_URL=
 ## Deployment
 
 Once you have the setup complete, you can copy-paste your `.env` file in the Vercel dashboard's `Settings` > `Environment Variables` section and deploy your project.
+
+Make sure to update the `NEXT_PUBLIC_VERCEL_URL` environment variable to your custom domain for production (instead of `http://localhost:3000`).
 
 ## Development
 

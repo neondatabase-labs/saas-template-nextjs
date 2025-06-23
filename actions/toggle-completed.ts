@@ -1,24 +1,23 @@
 "use server"
 
 import { db } from "@/lib/db/db"
-import { todos } from "@/lib/db/schema"
+import { todosTable } from "@/lib/db/schema"
 import { inArray } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { publishTask } from "@/app/api/queue/qstash"
 
-export async function processToggleCompleted(ids: number[], payload: { completed: boolean }) {
-	const validIds = ids.filter((id) => id > 0)
-	if (validIds.length === 0) return
+export async function processToggleCompleted(ids: string[], payload: { completed: boolean }) {
+	if (ids.length === 0) return
 
-	await db.update(todos).set({ completed: payload.completed }).where(inArray(todos.id, validIds))
+	await db
+		.update(todosTable)
+		.set({ completed: payload.completed })
+		.where(inArray(todosTable.id, ids))
 
 	revalidatePath("/")
 }
 
-export async function toggleTodo(id: number, payload: { completed: boolean }) {
-	// Don't try to update optimistic todos
-	if (id < 0) return { success: false }
-
+export async function toggleTodo(id: string, payload: { completed: boolean }) {
 	try {
 		await processToggleCompleted([id], payload)
 
@@ -29,17 +28,14 @@ export async function toggleTodo(id: number, payload: { completed: boolean }) {
 	}
 }
 
-export async function bulkToggleCompleted(ids: number[], payload: { completed: boolean }) {
-	// Filter out any negative IDs (optimistic todos)
-	const validIds = ids.filter((id) => id > 0)
-
-	if (validIds.length === 0) return { success: false }
+export async function bulkToggleCompleted(ids: string[], payload: { completed: boolean }) {
+	if (ids.length === 0) return { success: false }
 
 	try {
 		const job = await publishTask({
 			type: "toggleCompleted",
-			key: `toggle-completed-${validIds.sort().join("-")}`,
-			ids: validIds,
+			key: `toggle-completed-${ids.sort().join("-")}`,
+			ids,
 			completed: payload.completed,
 		})
 

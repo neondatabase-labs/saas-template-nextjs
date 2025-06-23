@@ -46,6 +46,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { generateUUID } from "@/lib/crypto/uuid"
 
 function AddTodoForm({
 	onAddTodo,
@@ -59,7 +60,7 @@ function AddTodoForm({
 	onProjectAdded?: (project: Project) => void
 }) {
 	const [selectedDueDate, setSelectedDueDate] = useState<Date | undefined>(undefined)
-	const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
+	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
 	const [isCalendarOpen, setIsCalendarOpen] = useState(false)
 	const [todoText, setTodoText] = useState("")
 
@@ -82,13 +83,15 @@ function AddTodoForm({
 
 		// Create an optimistic todo with a temporary negative ID
 		const optimisticTodo: Todo = {
-			id: -Math.floor(Math.random() * 1000) - 1,
+			id: generateUUID(),
 			text,
 			completed: false,
 			dueDate: selectedDueDate || null,
 			projectId: selectedProjectId,
 			userId: null,
 			ownerId: null,
+			createdAt: new Date(),
+			updatedAt: new Date(),
 		}
 
 		// Add optimistic todo to the UI
@@ -197,7 +200,7 @@ export function TodosPageClient({
 }) {
 	const [, startTransition] = useTransition()
 	const [searchQuery, setSearchQuery] = useState("")
-	const [selectedTodoIds, setSelectedTodoIds] = useState<Set<number>>(new Set())
+	const [selectedTodoIds, setSelectedTodoIds] = useState<Set<string>>(new Set())
 	const [isRescheduleCalendarOpen, setIsRescheduleCalendarOpen] = useState(false)
 	const [rescheduleDate, setRescheduleDate] = useState<Date | undefined>(undefined)
 	const [isAddTodoOpen, setIsAddTodoOpen] = useState(false)
@@ -205,17 +208,17 @@ export function TodosPageClient({
 
 	// Track pending bulk edits
 	type PendingEdit =
-		| { type: "delete"; ids: Set<number> }
-		| { type: "reschedule"; ids: Set<number>; dueDate: Date | null }
-		| { type: "moveToProject"; ids: Set<number>; projectId: number | null }
-		| { type: "toggleCompleted"; ids: Set<number>; completed: boolean }
+		| { type: "delete"; ids: Set<string> }
+		| { type: "reschedule"; ids: Set<string>; dueDate: Date | null }
+		| { type: "moveToProject"; ids: Set<string>; projectId: string | null }
+		| { type: "toggleCompleted"; ids: Set<string>; completed: boolean }
 
 	const [pendingEdits, setPendingEdits] = useState<PendingEdit[]>([])
 
 	// Optimistic state management for single-todo actions
 	const [optimisticTodos, updateOptimisticTodos] = useOptimistic(
 		todos,
-		(state, action: { type: "add"; todo: Todo } | { type: "delete"; id: number }) => {
+		(state, action: { type: "add"; todo: Todo } | { type: "delete"; id: string }) => {
 			if (action.type === "add") {
 				return [...state, action.todo]
 			} else if (action.type === "delete") {
@@ -286,7 +289,7 @@ export function TodosPageClient({
 	}
 
 	// Move multiple todos to a project
-	function moveSelectedTodosToProject(projectId: number | null) {
+	function moveSelectedTodosToProject(projectId: string | null) {
 		const idsToMove = Array.from(selectedTodoIds)
 
 		if (idsToMove.length === 0) return
@@ -328,7 +331,7 @@ export function TodosPageClient({
 	const isCurrentlyAtCapacity = totalTodos >= todoLimit
 
 	// Select or deselect a todo
-	function toggleTodoSelection(id: number, selected: boolean) {
+	function toggleTodoSelection(id: string, selected: boolean) {
 		setSelectedTodoIds((prev) => {
 			const newSet = new Set(prev)
 			if (selected) {
@@ -372,7 +375,7 @@ export function TodosPageClient({
 	})
 
 	// Add a function to handle single todo deletion
-	function handleDeleteTodo(id: number) {
+	function handleDeleteTodo(id: string) {
 		startTransition(() => {
 			// Update optimistically
 			updateOptimisticTodos({ type: "delete", id })
@@ -718,7 +721,7 @@ export function TodosPageClient({
 														<ProjectSelector
 															projects={optimisticProjects}
 															selectedProjectId={todo.projectId}
-															onSelectProject={(projectId: number | null) => {
+															onSelectProject={(projectId: string | null) => {
 																// First update optimistically
 																setPendingEdits((prev) => [
 																	...prev,

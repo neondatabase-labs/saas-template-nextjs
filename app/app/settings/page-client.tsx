@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 import { Card, CardTitle, CardHeader, CardDescription, CardFooter } from "@/components/ui/card"
+import { SubscriptionPlan } from "@/lib/stripe/plans"
 
 export function SettingsPageClient({
 	contactChannels: serverContactChannels,
@@ -66,13 +67,7 @@ export function SettingsPageClient({
 		remaining: number
 		subscription: string
 	} | null
-	plans: Array<{
-		id: string
-		priceId: string | undefined
-		todoLimit: number
-		todoDaysBehind: number
-		todoDaysAhead: number
-	}>
+	plans: SubscriptionPlan[]
 }) {
 	const user = useUser({ or: "redirect" })
 	const formRef = useRef<HTMLFormElement>(null)

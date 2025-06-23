@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache"
 import { db } from "./db/db"
-import { todos, projects, users_sync, user_metrics } from "./db/schema"
+import { todosTable, projectsTable, usersSyncTable, userMetricsTable } from "./db/schema"
 import { eq, desc, count, isNull } from "drizzle-orm"
-import { getStripePlan } from "@/app/api/stripe/plans"
+import { getStripePlan } from "@/lib/stripe/plans"
 import { stackServerApp, getAccessToken } from "@/lib/stack-auth/stack"
 import { cookies } from "next/headers"
 
@@ -15,7 +15,7 @@ export async function getTodos() {
 	}
 
 	try {
-		return await db.select().from(todos).orderBy(todos.id)
+		return await db.select().from(todosTable).orderBy(todosTable.id)
 	} catch (error) {
 		console.error("Failed to fetch todos:", error)
 		return []
@@ -24,7 +24,7 @@ export async function getTodos() {
 
 export async function getProjects() {
 	try {
-		return await db.select().from(projects).orderBy(desc(projects.createdAt))
+		return await db.select().from(projectsTable).orderBy(desc(projectsTable.createdAt))
 	} catch (error) {
 		console.error("Failed to fetch projects:", error)
 		return []
@@ -35,9 +35,9 @@ export async function getUsers() {
 	try {
 		return await db
 			.select()
-			.from(users_sync)
-			.where(isNull(users_sync.deleted_at))
-			.orderBy(users_sync.name)
+			.from(usersSyncTable)
+			.where(isNull(usersSyncTable.deletedAt))
+			.orderBy(usersSyncTable.name)
 	} catch (error) {
 		console.error("Failed to fetch users:", error)
 		return []
@@ -47,7 +47,7 @@ export async function getUsers() {
 export async function addTodo(formData: FormData) {
 	const text = formData.get("text") as string
 	const dueDateStr = formData.get("dueDate") as string | null
-	const projectIdStr = formData.get("projectId") as string | null
+	const projectId = formData.get("projectId") as string | null
 
 	if (!text?.trim()) {
 		return { error: "Todo text is required" }
@@ -59,14 +59,14 @@ export async function addTodo(formData: FormData) {
 	}
 
 	try {
-		let userMetrics = await db.query.user_metrics.findFirst({
-			where: eq(user_metrics.userId, user.id),
+		let userMetrics = await db.query.userMetricsTable.findFirst({
+			where: eq(userMetricsTable.userId, user.id),
 		})
 
 		if (!userMetrics) {
 			// Create initial metrics record for user
 			const [newMetrics] = await db
-				.insert(user_metrics)
+				.insert(userMetricsTable)
 				.values({ userId: user.id, todosCreated: 0 })
 				.returning()
 			userMetrics = newMetrics
@@ -75,7 +75,7 @@ export async function addTodo(formData: FormData) {
 		// Count total todos
 		const totalTodos = await db
 			.select({ count: count() })
-			.from(todos)
+			.from(todosTable)
 			.then((result) => result[0]?.count ?? 0)
 
 		const plan = await getStripePlan(user.id)
@@ -83,19 +83,19 @@ export async function addTodo(formData: FormData) {
 			return { error: "You have reached your todo limit. Delete some todos to create new ones." }
 		}
 
-		await db.insert(todos).values({
+		await db.insert(todosTable).values({
 			text,
 			dueDate: dueDateStr ? new Date(dueDateStr) : null,
-			projectId: projectIdStr ? Number.parseInt(projectIdStr) : null,
+			projectId,
 		})
 
 		await db
-			.update(user_metrics)
+			.update(userMetricsTable)
 			.set({
 				todosCreated: userMetrics.todosCreated + 1,
 				updatedAt: new Date(),
 			})
-			.where(eq(user_metrics.id, userMetrics.id))
+			.where(eq(userMetricsTable.id, userMetrics.id))
 
 		revalidatePath("/")
 		return { success: true }
@@ -112,7 +112,7 @@ export async function getTotalCreatedTodos() {
 	}
 
 	try {
-		const result = await db.$withAuth(accessToken).select({ count: count() }).from(todos)
+		const result = await db.$withAuth(accessToken).select({ count: count() }).from(todosTable)
 		return result[0]?.count ?? 0
 	} catch (error) {
 		console.error("Failed to count todos:", error)
@@ -127,8 +127,8 @@ export async function getCurrentUserTodosCreated() {
 			return 0
 		}
 
-		const userMetrics = await db.query.user_metrics.findFirst({
-			where: eq(user_metrics.userId, user.id),
+		const userMetrics = await db.query.userMetricsTable.findFirst({
+			where: eq(userMetricsTable.userId, user.id),
 		})
 
 		return userMetrics?.todosCreated ?? 0
@@ -141,14 +141,14 @@ export async function getCurrentUserTodosCreated() {
 export async function getUserTodoMetrics(userId: string) {
 	try {
 		// Get or create user metrics
-		let userMetrics = await db.query.user_metrics.findFirst({
-			where: eq(user_metrics.userId, userId),
+		let userMetrics = await db.query.userMetricsTable.findFirst({
+			where: eq(userMetricsTable.userId, userId),
 		})
 
 		if (!userMetrics) {
 			// Create initial metrics record for user
 			const [newMetrics] = await db
-				.insert(user_metrics)
+				.insert(userMetricsTable)
 				.values({ userId, todosCreated: 0 })
 				.returning()
 			userMetrics = newMetrics
@@ -171,22 +171,22 @@ export async function getUserTodoMetrics(userId: string) {
 export async function resetUserTodosCreated(userId: string) {
 	try {
 		// Find the user metrics
-		const userMetrics = await db.query.user_metrics.findFirst({
-			where: eq(user_metrics.userId, userId),
+		const userMetrics = await db.query.userMetricsTable.findFirst({
+			where: eq(userMetricsTable.userId, userId),
 		})
 
 		if (userMetrics) {
 			// Update existing metrics
 			await db
-				.update(user_metrics)
+				.update(userMetricsTable)
 				.set({
 					todosCreated: 0,
 					updatedAt: new Date(),
 				})
-				.where(eq(user_metrics.id, userMetrics.id))
+				.where(eq(userMetricsTable.id, userMetrics.id))
 		} else {
 			// Create new metrics with 0 todos
-			await db.insert(user_metrics).values({ userId, todosCreated: 0 })
+			await db.insert(userMetricsTable).values({ userId, todosCreated: 0 })
 		}
 
 		revalidatePath("/")

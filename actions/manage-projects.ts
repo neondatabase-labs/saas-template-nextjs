@@ -1,7 +1,7 @@
 "use server"
 
 import { db } from "@/lib/db/db"
-import { projects, todos } from "@/lib/db/schema"
+import { projectsTable, todosTable } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 
@@ -14,7 +14,7 @@ export async function addProject(payload: { name: string; color?: string }) {
 
 	try {
 		const result = await db
-			.insert(projects)
+			.insert(projectsTable)
 			.values({
 				name,
 				color: color || "#4f46e5", // Default to indigo if no color provided
@@ -29,13 +29,13 @@ export async function addProject(payload: { name: string; color?: string }) {
 	}
 }
 
-export async function deleteProject(id: number) {
+export async function deleteProject(id: string) {
 	try {
 		// First, set projectId to null for all todos in this project
-		await db.update(todos).set({ projectId: null }).where(eq(todos.projectId, id))
+		await db.update(todosTable).set({ projectId: null }).where(eq(todosTable.projectId, id))
 
 		// Then delete the project
-		await db.delete(projects).where(eq(projects.id, id))
+		await db.delete(projectsTable).where(eq(projectsTable.id, id))
 
 		revalidatePath("/")
 		return { success: true }

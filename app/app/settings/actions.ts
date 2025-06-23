@@ -4,8 +4,8 @@ import { getAccessToken, stackServerApp } from "@/lib/stack-auth/stack"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import { redirectToBillingPortal, redirectToCheckout } from "@/app/api/stripe/client"
-import { getStripePlan } from "@/app/api/stripe/plans"
+import { redirectToBillingPortal, redirectToCheckout } from "@/lib/stripe/stripe"
+import { getStripePlan } from "@/lib/stripe/plans"
 
 export async function updateEmail(formData: FormData) {
 	const newEmail = formData.get("newEmail") as string

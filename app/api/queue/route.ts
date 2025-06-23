@@ -2,24 +2,24 @@ import { processTask } from "@/app/api/queue/qstash"
 import { Receiver } from "@upstash/qstash"
 
 export type QueueTask =
-	| { type: "deleteTodo"; key: `delete-todo-${number}`; id: number }
-	| { type: "deleteTodos"; key: `delete-todos-${string}`; ids: number[] }
+	| { type: "deleteTodo"; key: `delete-todo-${string}`; id: string }
+	| { type: "deleteTodos"; key: `delete-todos-${string}`; ids: string[] }
 	| {
 			type: "updateDueDate"
 			key: `update-due-date-${string}`
-			ids: number[]
+			ids: string[]
 			dueDate: string | null
 	  }
 	| {
 			type: "updateProject"
 			key: `update-project-${string}`
-			ids: number[]
-			projectId: number | null
+			ids: string[]
+			projectId: string | null
 	  }
 	| {
 			type: "toggleCompleted"
 			key: `toggle-completed-${string}`
-			ids: number[]
+			ids: string[]
 			completed: boolean
 	  }
 

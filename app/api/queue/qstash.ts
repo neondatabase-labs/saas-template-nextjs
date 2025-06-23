@@ -5,24 +5,24 @@ import { processProject } from "@/actions/update-project"
 import { processToggleCompleted } from "@/actions/toggle-completed"
 
 export type QueueTask =
-	| { type: "deleteTodo"; key: `delete-todo-${number}`; id: number }
-	| { type: "deleteTodos"; key: `delete-todos-${string}`; ids: number[] }
+	| { type: "deleteTodo"; key: `delete-todo-${string}`; id: string }
+	| { type: "deleteTodos"; key: `delete-todos-${string}`; ids: string[] }
 	| {
 			type: "updateDueDate"
 			key: `update-due-date-${string}`
-			ids: number[]
+			ids: string[]
 			dueDate: string | null
 	  }
 	| {
 			type: "updateProject"
 			key: `update-project-${string}`
-			ids: number[]
-			projectId: number | null
+			ids: string[]
+			projectId: string | null
 	  }
 	| {
 			type: "toggleCompleted"
 			key: `toggle-completed-${string}`
-			ids: number[]
+			ids: string[]
 			completed: boolean
 	  }
 
@@ -58,7 +58,7 @@ const client = new Client({
 })
 
 export async function publishTask<T extends QueueTask>(task: T) {
-	const url = new URL(`https://${process.env.VERCEL_URL}/api/queue`)
+	const url = new URL(`${process.env.NEXT_PUBLIC_VERCEL_URL}/api/queue`)
 
 	const job = await client.publishJSON({
 		url: url.toString(),

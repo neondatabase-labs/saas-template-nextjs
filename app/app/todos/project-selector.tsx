@@ -33,8 +33,8 @@ export function ProjectSelector({
 	...props
 }: {
 	projects: Project[]
-	selectedProjectId: number | null
-	onSelectProject: (projectId: number | null) => void
+	selectedProjectId: string | null
+	onSelectProject: (projectId: string | null) => void
 	onProjectAdded?: (project: Project) => void
 } & ComponentProps<typeof PopoverTrigger>) {
 	const [open, setOpen] = useState(false)

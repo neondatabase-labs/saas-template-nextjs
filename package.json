@@ -38,8 +38,6 @@
 		"@tailwindcss/postcss": "^4.0.10",
 		"@types/uuid": "^10.0.0",
 		"@upstash/qstash": "^2.7.23",
-		"@upstash/redis": "^1.34.5",
-		"@vercel/kv": "^3.0.0",
 		"@vercel/toolbar": "^0.1.36",
 		"ajv": "^8.17.1",
 		"class-variance-authority": "^0.7.1",

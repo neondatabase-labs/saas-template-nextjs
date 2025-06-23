@@ -38,8 +38,7 @@ export function UserSelector({
 						<UserAvatar
 							user={{
 								name: selectedUser.name,
-								// eslint-disable-next-line @typescript-eslint/no-explicit-any
-								avatarUrl: (selectedUser.raw_json as any)?.avatarUrl,
+								avatarUrl: (selectedUser.rawJson as { avatarUrl: string })?.avatarUrl,
 							}}
 							showName
 							className="mr-2"
@@ -85,8 +84,7 @@ export function UserSelector({
 											<UserAvatar
 												user={{
 													name: user.name,
-													// eslint-disable-next-line @typescript-eslint/no-explicit-any
-													avatarUrl: (user.raw_json as any)?.avatarUrl,
+													avatarUrl: (user.rawJson as { avatarUrl: string })?.avatarUrl,
 												}}
 												showName
 											/>
