@@ -13,6 +13,7 @@
 		"start:next": "next start",
 		"start:stripe": "tsx stripe.setup.ts",
 		"lint": "next lint",
+		"typecheck": "npx tsc --noEmit",
 		"db:generate": "drizzle-kit generate",
 		"db:push": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio"

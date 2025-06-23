@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
-import { checkAccessToken } from "./stack"
+import { checkAccessToken } from "./lib/stack-auth/stack"
 
 function isProtectedRoute(url: string) {
 	if (url.startsWith("/app")) return true

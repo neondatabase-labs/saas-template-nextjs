@@ -1,17 +1,16 @@
 import "server-only"
 
+import { z } from "zod"
+import { ReactNode } from "react"
 import { StackProvider, StackServerApp, StackTheme } from "@stackframe/stack"
 import { remember } from "@epic-web/remember"
-import { z } from "zod"
 import { createRemoteJWKSet } from "jose/jwks/remote"
 import { jwtVerify } from "jose/jwt/verify"
 import { NextRequest, NextResponse } from "next/server"
 import { ReadonlyRequestCookies } from "next/dist/server/web/spec-extension/adapters/request-cookies"
 import { RequestCookies } from "next/dist/compiled/@edge-runtime/cookies"
-import { ReactNode } from "react"
 import { CustomUserProvider } from "./stack-client"
 
-// TODO: do we want this abstraction?
 export function logout(request: NextRequest) {
 	return NextResponse.redirect(new URL("/handler/sign-out", request.url))
 }
@@ -69,10 +68,70 @@ export async function checkAccessToken(cookies: ReadonlyRequestCookies | Request
 	return payload.sub
 }
 
-export function CustomStackProvider({ children }: { children: ReactNode }) {
+export function StackAuthProvider({ children }: { children: ReactNode }) {
 	return (
 		<StackProvider app={stackServerApp}>
-			<StackTheme>
+			<StackTheme
+				theme={{
+					light: {
+						// Base colors
+						background: "#fbf1dc",
+						foreground: "#5b3d2c",
+						card: "#fbeed5",
+						cardForeground: "#5b3d2c",
+						popover: "#fbf1dc",
+						popoverForeground: "#5b3d2c",
+
+						// Brand colors
+						primary: "#f07e38",
+						primaryForeground: "#fefaef",
+						secondary: "#bae4c5",
+						secondaryForeground: "#2f5c35",
+
+						// Utility colors
+						muted: "#f3e1d0",
+						mutedForeground: "#90705c",
+						accent: "#f8c655",
+						accentForeground: "#774b00",
+						destructive: "#f5312f",
+						destructiveForeground: "#fefaef",
+
+						// Border and focus
+						border: "#e8cfba",
+						input: "#eddaca",
+						ring: "#f07e38",
+					},
+					dark: {
+						// Base colors
+						background: "#302817",
+						foreground: "#efd9cd",
+						card: "#382c15",
+						cardForeground: "#efd9cd",
+						popover: "#302817",
+						popoverForeground: "#efd9cd",
+
+						// Brand colors
+						primary: "#ba480b",
+						primaryForeground: "#f3eee0",
+						secondary: "#1f5432",
+						secondaryForeground: "#c5e9c7",
+
+						// Utility colors
+						muted: "#3c2a18",
+						mutedForeground: "#c8a691",
+						accent: "#a5770f",
+						accentForeground: "#241100",
+						destructive: "#c20000",
+						destructiveForeground: "#e3decf",
+
+						// Border and focus
+						border: "#5b422a",
+						input: "#4a3624",
+						ring: "#ba480b",
+					},
+					radius: "1rem",
+				}}
+			>
 				<CustomUserProvider>{children}</CustomUserProvider>
 			</StackTheme>
 		</StackProvider>

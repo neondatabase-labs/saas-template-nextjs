@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, use, useCallback, ReactNode, startTransition, useEffect } from "react"
+import { createContext, use, useCallback, type ReactNode, startTransition, useEffect } from "react"
 import { useUser as baseUseUser, CurrentUser, User } from "@stackframe/stack"
 import { z } from "zod"
 import { useOptimistic } from "react"

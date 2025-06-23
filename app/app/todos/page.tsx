@@ -1,6 +1,6 @@
 import { TodosPageClient } from "./page-client"
 import { getTodos, getProjects, getUserTodoMetrics } from "@/lib/actions"
-import { stackServerApp } from "@/stack"
+import { stackServerApp } from "@/lib/stack-auth/stack"
 
 export default async function TodosPage() {
 	const user = await stackServerApp.getUser()

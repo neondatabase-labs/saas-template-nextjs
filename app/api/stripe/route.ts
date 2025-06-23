@@ -2,7 +2,7 @@ import { headers } from "next/headers"
 import { after, NextResponse } from "next/server"
 import { getStripeCustomerId, processStripeEvent, syncStripeDataToKV } from "@/lib/stripe"
 import { redirect } from "next/navigation"
-import { stackServerApp } from "@/stack"
+import { stackServerApp } from "@/lib/stack-auth/stack"
 
 // Send users to GET /api/stripe after they complete the checkout process
 export async function GET() {

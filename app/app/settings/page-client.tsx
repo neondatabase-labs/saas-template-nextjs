@@ -16,7 +16,7 @@ import {
 	TrashIcon,
 } from "lucide-react"
 import { startTransition, useOptimistic, useRef, useState } from "react"
-import { useUser } from "@/stack-client"
+import { useUser } from "@/lib/stack-auth/stack-client"
 import Image from "next/image"
 import { ImageInput } from "@/components/image-input"
 import {

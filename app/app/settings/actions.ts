@@ -1,6 +1,6 @@
 "use server"
 
-import { getAccessToken, stackServerApp } from "@/stack"
+import { getAccessToken, stackServerApp } from "@/lib/stack-auth/stack"
 import { revalidatePath } from "next/cache"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"

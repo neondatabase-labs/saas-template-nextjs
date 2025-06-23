@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation"
-import { stackServerApp } from "@/stack"
+import { stackServerApp } from "@/lib/stack-auth/stack"
 import { getStripePlan } from "@/app/api/stripe/plans"
 import { SettingsPageClient } from "./page-client"
 import { verifyContactChannel } from "./actions"
