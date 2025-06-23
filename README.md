@@ -29,7 +29,7 @@ NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY=
 STACK_SECRET_SERVER_KEY=
 ```
 
-### RLS (Row Level Security)
+### Optional: RLS (Row Level Security)
 
 Enable RLS in the Neon dashboard. You have to do this through the Neon dashboard regardless of how you setup your database (Vercel Integration or Neon dashboard).
 
@@ -85,4 +85,47 @@ npm run dev:stripe
 ```
 
 Note: `npm run dev:stripe` is part of the `npm run dev` setup but you only have to retrieve the webhook signing secret once.
+
+The project should now locally via `npm run dev`. You'll still see some errors in the console because you're still missing required environment variables.
+
+### Vercel
+
+Push your code to a new GitHub repository. Then navigate to `https://vercel.com/new` and select your GitHub repository to create a new Vercel project.
+
+The initial deployment will fail because you're still missing required environment variables.
+
+#### Protection Bypass for Automation
+
+In the Vercel dashboard, navigate to `Settings` > `Deployment Protection` and add a new secret in the `Protection Bypass for Automation` section. Copy-paste the secret into the `.env` file as the `VERCEL_AUTOMATION_BYPASS_SECRET` environment variable. This is required for QStash to work in Preview environments.
+
+```txt
+VERCEL_AUTOMATION_BYPASS_SECRET=
+```
+
+### Vercel Integration - Upstash QStash
+
+Navigate to the new Vercel project and select the `Storage` tab to setup QStash for background jobs.
+
+Select `Upstash` > `QStash` and create a new QStash instance.
+
+Copy the code snippet displayed in the `QStash` tab into the `.env` file:
+
+```txt
+QSTASH_CURRENT_SIGNING_KEY=
+QSTASH_NEXT_SIGNING_KEY=
+QSTASH_TOKEN=
+QSTASH_URL=
+```
+
+## Deployment
+
+Once you have the setup complete, you can copy-paste your `.env` file in the Vercel dashboard's `Settings` > `Environment Variables` section and deploy your project.
+
+## Development
+
+Run the development server, including the Stripe webhook listener:
+
+```bash
+npm run dev
+```
 
