@@ -251,7 +251,7 @@ export async function verifyContactChannel({ code }: { code: string }) {
 		throw new Error(response.error)
 	}
 }
-	
+
 export async function createCheckoutSession() {
 	const user = await stackServerApp.getUser()
 	if (!user) {

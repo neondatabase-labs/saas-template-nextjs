@@ -5,5 +5,5 @@ import * as schema from "./schema"
 
 // Create a Drizzle ORM instance
 export const db = remember("db", () => {
-  return drizzle(neon(process.env.DATABASE_URL!), { schema })
+	return drizzle(neon(process.env.DATABASE_URL!), { schema })
 })

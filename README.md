@@ -11,7 +11,7 @@ cp .env.example .env
 ```
 
 ### Neon Postgres and Auth
- 
+
 You can either setup your Neon database through the Neon dashboard or through Vercel's database integration. If you're setting up Neon through the Vercel Integration, it will create a new Vercel-managed organization and project for you on neon.tech.
 
 Below are the steps for setting up your Neon database through the Neon dashboard.
@@ -37,7 +37,7 @@ First, navigate to the `Auth` tab. In the `Configuration` section, click `Claim 
 
 In the StackAuth dashboard, navigate to the `Settings` tab. Copy the `JWKS URL`.
 
-Navigate back to the Neon dashboard and navigate to your Neon project > `Settings` > `RLS` > `Setup authentication provider`. Paste the `JWKS URL` into the `JWKS URL` field. 
+Navigate back to the Neon dashboard and navigate to your Neon project > `Settings` > `RLS` > `Setup authentication provider`. Paste the `JWKS URL` into the `JWKS URL` field.
 
 Finally, follow the `Set up Stack Auth with Neon RLS` instructions in the Neon dashboard.
 
@@ -94,6 +94,8 @@ Push your code to a new GitHub repository. Then navigate to `https://vercel.com/
 
 The initial deployment will fail because you're still missing required environment variables.
 
+Setup a custom domain or copy the default domain created by Vercel and add it to the trusted domains in either the StackAuth dashboard or the Neon dashboard > `Auth` > `Configuration`.
+
 #### Protection Bypass for Automation
 
 In the Vercel dashboard, navigate to `Settings` > `Deployment Protection` and add a new secret in the `Protection Bypass for Automation` section. Copy-paste the secret into the `.env` file as the `VERCEL_AUTOMATION_BYPASS_SECRET` environment variable. This is required for QStash to work in Preview environments.
@@ -128,4 +130,3 @@ Run the development server, including the Stripe webhook listener:
 ```bash
 npm run dev
 ```
-

@@ -5,7 +5,7 @@ export default withVercelToolbar()({
 	eslint: {
 		ignoreDuringBuilds: true,
 	},
-	
+
 	experimental: {
 		useCache: true,
 	},
@@ -34,10 +34,10 @@ export default withVercelToolbar()({
 	webpack: (config) => {
 		config.optimization.minimizer = [
 			new TerserPlugin({
-					terserOptions: {
-							keep_fnames: true, // Preserve function names (prevents SHA256 loss)
-					}
-			})
+				terserOptions: {
+					keep_fnames: true, // Preserve function names (prevents SHA256 loss)
+				},
+			}),
 		]
 		return config
 	},

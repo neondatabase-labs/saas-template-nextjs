@@ -26,7 +26,7 @@ export async function redirectToCheckout({
 		})
 		stripeCustomerId = customer.id
 	}
-	
+
 	const plans = await plansFlag()
 	const checkoutSession = await stripe.checkout.sessions.create({
 		customer: stripeCustomerId,
@@ -51,11 +51,7 @@ export async function redirectToCheckout({
 	redirect(checkoutSession.url)
 }
 
-export async function redirectToBillingPortal({
-	userId,
-}: {
-	userId: string
-}) {
+export async function redirectToBillingPortal({ userId }: { userId: string }) {
 	const customerId = await getStripeCustomerId(userId)
 	if (!customerId) {
 		throw new Error("Customer not found")
