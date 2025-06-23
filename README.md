@@ -12,7 +12,9 @@ cp .env.example .env
 
 ### Neon Postgres and Auth
  
-You can either setup your Neon database through the Neon dashboard or through Vercel's database integration.
+You can either setup your Neon database through the Neon dashboard or through Vercel's database integration. If you're setting up Neon through the Vercel Integration, it will create a new Vercel-managed organization and project for you on neon.tech.
+
+Below are the steps for setting up your Neon database through the Neon dashboard.
 
 #### Neon dashboard
 
@@ -29,7 +31,7 @@ STACK_SECRET_SERVER_KEY=
 
 ### RLS (Row Level Security)
 
-Enable RLS in the Neon dashboard. You have to do this through the Neon dashboard regardless of how you setup your database.
+Enable RLS in the Neon dashboard. You have to do this through the Neon dashboard regardless of how you setup your database (Vercel Integration or Neon dashboard).
 
 First, navigate to the `Auth` tab. In the `Configuration` section, click `Claim in Stack Auth`. Set up your Neon Auth project in StackAuth.
 
@@ -45,7 +47,23 @@ Run `npm run db:generate` to generate the initial database migration files.
 
 Next, run `npm run db:push` to push the migration files to the database.
 
+If the migration fails, it is likely because you have not enabled RLS in the Neon dashboard. Make sure to follow the `Set up Stack Auth with Neon RLS` instructions in the Neon dashboard.
+
 ### Stripe
+
+#### Stripe account and secret key
+
+First, create a new Stripe account or use an existing one on `https://dashboard.stripe.com/`. Enter a sandbox or test mode and create a new test product.
+
+Navigate to the `Developers` settings and `API keys` section. Copy the `Secret key` and paste it into the `.env` file as the `STRIPE_SECRET_KEY` environment variable.
+
+#### Stripe webhook listener
+
+Run `npm run dev:stripe` to start the Stripe webhook listener. This will listen for events from Stripe and forward them to the Next.js app. Copy-paste the webhook signing secret into the `.env` file (`STRIPE_WEBHOOK_SECRET`):
+
+```bash
+npm run dev:stripe
+```
 
 #### Stripe CLI
 
@@ -67,3 +85,4 @@ npm run dev:stripe
 ```
 
 Note: `npm run dev:stripe` is part of the `npm run dev` setup but you only have to retrieve the webhook signing secret once.
+
