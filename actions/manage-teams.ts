@@ -24,10 +24,16 @@ export async function createTeam(formData: FormData) {
 		// Set the new team as selected
 		await user.setSelectedTeam(newTeam)
 
-		revalidatePath("/app/teams", "layout")
-		revalidatePath("/app")
+		revalidatePath("/", "layout")
 
-		return { success: true, team: newTeam }
+		return { 
+			success: true, 
+			team: {
+				id: newTeam.id,
+				displayName: newTeam.displayName,
+				profileImageUrl: newTeam.profileImageUrl
+			}
+		}
 	} catch (error) {
 		console.error("Failed to create team:", error)
 		return { error: "Failed to create team" }
@@ -61,7 +67,7 @@ export async function deleteTeam(formData: FormData) {
 
 		await team.delete()
 
-		revalidatePath("/")
+		revalidatePath("/", "layout")
 
 		return { success: true }
 	} catch (error) {
