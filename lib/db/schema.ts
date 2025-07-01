@@ -1,5 +1,5 @@
 import { text, boolean, pgTable, timestamp, integer, uuid } from "drizzle-orm/pg-core"
-import { relations, sql } from "drizzle-orm"
+import { relations } from "drizzle-orm"
 import { usersSync as usersSyncTable } from "drizzle-orm/neon"
 
 export { usersSyncTable }
@@ -15,9 +15,9 @@ export const projectsTable = pgTable("projects", {
 	id: uuid("id").defaultRandom().primaryKey(),
 	name: text("name").notNull(),
 	color: text("color").notNull().default("#4f46e5"), // Default indigo color
+	teamId: text("team_id"), // Stack Auth team ID
 	createdAt,
 	updatedAt,
-	ownerId: text("owner_id").references(() => usersSyncTable.id),
 })
 
 // Separate table to track user metrics
@@ -35,8 +35,8 @@ export const todosTable = pgTable("todos", {
 	completed: boolean("completed").default(false).notNull(),
 	dueDate: timestamp("due_date"),
 	projectId: uuid("project_id").references(() => projectsTable.id),
+	teamId: text("team_id"), // Stack Auth team ID
 	userId: text("user_id").references(() => usersSyncTable.id),
-	ownerId: text("owner_id").references(() => usersSyncTable.id),
 	createdAt,
 	updatedAt,
 })
@@ -87,9 +87,7 @@ export const projectsRelations = relations(projectsTable, ({ many }) => ({
 }))
 
 export const usersRelations = relations(usersSyncTable, ({ many }) => ({
-	assignedTodos: many(todosTable, { relationName: "assignedTodos" }),
 	metrics: many(userMetricsTable, { relationName: "metrics" }),
-	projects: many(projectsTable, { relationName: "projects" }),
 	subscriptions: many(subscriptionsTable, { relationName: "subscriptions" }),
 	stripeCustomers: many(stripeCustomersTable, { relationName: "stripeCustomers" }),
 }))
@@ -107,11 +105,6 @@ export const todosRelations = relations(todosTable, ({ one }) => ({
 		fields: [todosTable.projectId],
 		references: [projectsTable.id],
 		relationName: "todos",
-	}),
-	user: one(usersSyncTable, {
-		fields: [todosTable.userId],
-		references: [usersSyncTable.id],
-		relationName: "assignedTodos",
 	}),
 }))
 

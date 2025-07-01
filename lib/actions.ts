@@ -48,14 +48,25 @@ export async function addTodo(formData: FormData) {
 	const text = formData.get("text") as string
 	const dueDateStr = formData.get("dueDate") as string | null
 	const projectId = formData.get("projectId") as string | null
+	const teamId = formData.get("teamId") as string | null
 
 	if (!text?.trim()) {
 		return { error: "Todo text is required" }
 	}
 
+	if (!teamId) {
+		return { error: "Team ID is required" }
+	}
+
 	const user = await stackServerApp.getUser({ or: "redirect" })
 	if (!user) {
 		return { error: "User not found" }
+	}
+
+	// Verify user has access to this team
+	const userTeam = await user.getTeam(teamId)
+	if (!userTeam) {
+		return { error: "You don't have access to this team" }
 	}
 
 	try {
@@ -72,10 +83,11 @@ export async function addTodo(formData: FormData) {
 			userMetrics = newMetrics
 		}
 
-		// Count total todos
+		// Count total todos for this user
 		const totalTodos = await db
 			.select({ count: count() })
 			.from(todosTable)
+			.where(eq(todosTable.userId, user.id))
 			.then((result) => result[0]?.count ?? 0)
 
 		const plan = await getStripePlan(user.id)
@@ -87,6 +99,8 @@ export async function addTodo(formData: FormData) {
 			text,
 			dueDate: dueDateStr ? new Date(dueDateStr) : null,
 			projectId,
+			teamId,
+			userId: user.id,
 		})
 
 		await db
@@ -97,7 +111,7 @@ export async function addTodo(formData: FormData) {
 			})
 			.where(eq(userMetricsTable.id, userMetrics.id))
 
-		revalidatePath("/")
+		revalidatePath(`/app/teams/${teamId}/todos`)
 		return { success: true }
 	} catch (error) {
 		console.error("Failed to add todo:", error)

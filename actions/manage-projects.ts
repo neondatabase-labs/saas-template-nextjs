@@ -4,12 +4,24 @@ import { db } from "@/lib/db/db"
 import { projectsTable, todosTable } from "@/lib/db/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
+import { stackServerApp } from "@/lib/stack-auth/stack"
 
-export async function addProject(payload: { name: string; color?: string }) {
-	const { name, color } = payload
+export async function addProject(payload: { name: string; color?: string; teamId: string }) {
+	const { name, color, teamId } = payload
 
 	if (!name?.trim()) {
 		return { error: "Project name is required" }
+	}
+
+	if (!teamId) {
+		return { error: "Team ID is required" }
+	}
+
+	// Verify user has access to this team
+	const user = await stackServerApp.getUser({ or: "redirect" })
+	const userTeam = await user.getTeam(teamId)
+	if (!userTeam) {
+		return { error: "You don't have access to this team" }
 	}
 
 	try {
@@ -18,6 +30,7 @@ export async function addProject(payload: { name: string; color?: string }) {
 			.values({
 				name,
 				color: color || "#4f46e5", // Default to indigo if no color provided
+				teamId,
 			})
 			.returning()
 

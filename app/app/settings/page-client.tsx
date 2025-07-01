@@ -29,6 +29,7 @@ import {
 	createCheckoutSession,
 	createBillingPortalSession,
 } from "./actions"
+import { deleteTeam } from "@/actions/manage-teams"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
@@ -51,6 +52,7 @@ export function SettingsPageClient({
 	planId,
 	todoMetrics,
 	plans,
+	teams: serverTeams,
 }: {
 	contactChannels: Array<{
 		id: string
@@ -68,12 +70,19 @@ export function SettingsPageClient({
 		subscription: string
 	} | null
 	plans: SubscriptionPlan[]
+	teams: Array<{
+		id: string
+		displayName: string
+		profileImageUrl: string | null
+		isSelected: boolean
+	}>
 }) {
 	const user = useUser({ or: "redirect" })
 	const formRef = useRef<HTMLFormElement>(null)
 	const [profileError, setProfileError] = useState("")
 	const [passwordError, setPasswordError] = useState<string | null>(null)
 	const [deleteError, setDeleteError] = useState<string | null>(null)
+	const [teamError, setTeamError] = useState<string | null>(null)
 	const [showNewPassword, setShowNewPassword] = useState(false)
 	const [pendingVerificationId, setPendingVerificationId] = useState<string | null>(null)
 
@@ -110,6 +119,22 @@ export function SettingsPageClient({
 						}
 					})
 			}
+		},
+	)
+
+	const [teams, sendTeamEvent] = useOptimistic(
+		serverTeams,
+		(
+			current,
+			event: { type: "deleteTeam"; id: string } | { type: "restoreTeam"; team: typeof serverTeams[0] },
+		) => {
+			if (event.type === "deleteTeam") {
+				return current.filter((team) => team.id !== event.id)
+			}
+			if (event.type === "restoreTeam") {
+				return [...current, event.team]
+			}
+			return current
 		},
 	)
 
@@ -472,6 +497,124 @@ export function SettingsPageClient({
 							</div>
 						</div>
 					</form>
+				</div>
+			</div>
+
+			<Separator className="my-8" />
+
+			{/* Teams Management */}
+			<div>
+				<h2 className="text-lg font-medium flex items-center gap-2">
+					<Users className="h-5 w-5" />
+					Teams
+				</h2>
+				<p className="text-sm text-muted-foreground mt-1">
+					Manage your teams. You can delete teams that you have access to.
+				</p>
+
+				{teamError && (
+					<div className="mt-4 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md flex items-center justify-between">
+						<span>{teamError}</span>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => setTeamError(null)}
+							className="h-auto p-1 text-destructive hover:bg-destructive/20"
+						>
+							<span className="sr-only">Dismiss error</span>
+							×
+						</Button>
+					</div>
+				)}
+
+				<div className="mt-6 space-y-4">
+					{teams.length === 0 ? (
+						<p className="text-sm text-muted-foreground">No teams found.</p>
+					) : (
+						<div className="border rounded-lg">
+							<div className="overflow-x-auto">
+								<table className="w-full">
+									<thead className="border-b bg-muted/50">
+										<tr>
+											<th className="text-left p-3 font-medium">Team</th>
+											<th className="text-left p-3 font-medium">Status</th>
+											<th className="text-right p-3 font-medium">Actions</th>
+										</tr>
+									</thead>
+									<tbody>
+										{teams.map((team) => (
+											<tr key={team.id} className="border-b last:border-0 hover:bg-muted/30">
+												<td className="p-3">
+													<div className="flex items-center gap-3">
+														<div className="relative h-8 w-8 overflow-hidden rounded-full bg-muted flex items-center justify-center">
+															{team.profileImageUrl ? (
+																<Image
+																	src={team.profileImageUrl}
+																	alt={team.displayName}
+																	className="object-cover"
+																	fill
+																/>
+															) : (
+																<Users className="h-4 w-4 text-muted-foreground" />
+															)}
+														</div>
+														<span className="font-medium">{team.displayName}</span>
+													</div>
+												</td>
+												<td className="p-3">
+													{team.isSelected && (
+														<Badge variant="secondary">Currently Selected</Badge>
+													)}
+												</td>
+												<td className="p-3 text-right">
+													<AlertDialog>
+														<AlertDialogTrigger asChild>
+															<Button
+																variant="ghost" 
+																size="sm"
+																className="text-destructive hover:text-destructive hover:bg-destructive/10"
+															>
+																<Trash2 className="h-4 w-4" />
+																<span className="sr-only">Delete team</span>
+															</Button>
+														</AlertDialogTrigger>
+														<AlertDialogContent>
+															<AlertDialogHeader>
+																<AlertDialogTitle>Delete Team</AlertDialogTitle>
+																<AlertDialogDescription>
+																	Are you sure you want to delete &quot;{team.displayName}&quot;? This action cannot be undone and all associated data will be permanently deleted.
+																</AlertDialogDescription>
+															</AlertDialogHeader>
+															<AlertDialogFooter>
+																<AlertDialogCancel>Cancel</AlertDialogCancel>
+																<form
+																	action={async (formData) => {
+																		setTeamError(null)
+																		sendTeamEvent({ type: "deleteTeam", id: team.id })
+																		const result = await deleteTeam(formData)
+																		if (result?.error) {
+																			// Restore the team if there was an error
+																			sendTeamEvent({ type: "restoreTeam", team })
+																			setTeamError(result.error)
+																		}
+																	}}
+																>
+																	<input type="hidden" name="teamId" value={team.id} />
+																	<Button type="submit" variant="destructive">
+																		Delete Team
+																	</Button>
+																</form>
+															</AlertDialogFooter>
+														</AlertDialogContent>
+													</AlertDialog>
+												</td>
+											</tr>
+										))}
+									</tbody>
+								</table>
+							</div>
+						</div>
+					)}
 				</div>
 			</div>
 

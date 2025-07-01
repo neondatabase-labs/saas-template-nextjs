@@ -21,15 +21,7 @@ export default withVercelToolbar()({
 		],
 	},
 
-	async redirects() {
-		return [
-			{
-				source: "/app",
-				destination: "/app/todos",
-				permanent: false,
-			},
-		]
-	},
+
 
 	webpack: (config) => {
 		config.optimization.minimizer = [

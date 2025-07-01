@@ -53,11 +53,13 @@ function AddTodoForm({
 	onClose,
 	projects,
 	onProjectAdded,
+	teamId,
 }: {
 	onAddTodo: (todo: Todo) => void
 	onClose: () => void
 	projects: Project[]
 	onProjectAdded?: (project: Project) => void
+	teamId: string
 }) {
 	const [selectedDueDate, setSelectedDueDate] = useState<Date | undefined>(undefined)
 	const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
@@ -81,6 +83,9 @@ function AddTodoForm({
 			formData.append("projectId", selectedProjectId.toString())
 		}
 
+		// Add team ID to form data
+		formData.append("teamId", teamId)
+
 		// Create an optimistic todo with a temporary negative ID
 		const optimisticTodo: Todo = {
 			id: generateUUID(),
@@ -88,8 +93,8 @@ function AddTodoForm({
 			completed: false,
 			dueDate: selectedDueDate || null,
 			projectId: selectedProjectId,
+			teamId,
 			userId: null,
-			ownerId: null,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		}
@@ -131,6 +136,7 @@ function AddTodoForm({
 					selectedProjectId={selectedProjectId}
 					onSelectProject={setSelectedProjectId}
 					onProjectAdded={onProjectAdded}
+					teamId={teamId}
 					asChild
 				>
 					{selectedProject ? (
@@ -193,10 +199,12 @@ export function TodosPageClient({
 	todos,
 	projects,
 	todoLimit,
+	teamId,
 }: {
 	todos: Todo[]
 	projects: Project[]
 	todoLimit: number
+	teamId: string
 }) {
 	const [, startTransition] = useTransition()
 	const [searchQuery, setSearchQuery] = useState("")
@@ -505,6 +513,7 @@ export function TodosPageClient({
 									onClose={() => setIsAddTodoOpen(false)}
 									projects={optimisticProjects}
 									onProjectAdded={handleProjectAdded}
+									teamId={teamId}
 								/>
 							</>
 						)}
@@ -558,6 +567,7 @@ export function TodosPageClient({
 										moveSelectedTodosToProject(projectId)
 									}}
 									onProjectAdded={handleProjectAdded}
+									teamId={teamId}
 									asChild
 								>
 									<Button variant="outline" size="sm">
@@ -736,6 +746,7 @@ export function TodosPageClient({
 																updateTodoProject(todo.id, { projectId })
 															}}
 															onProjectAdded={handleProjectAdded}
+															teamId={teamId}
 															asChild
 														>
 															{project ? (

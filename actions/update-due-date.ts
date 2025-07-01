@@ -14,7 +14,7 @@ export async function processDueDate(ids: string[], payload: { dueDate: string |
 		.set({ dueDate: payload.dueDate ? new Date(payload.dueDate) : null })
 		.where(inArray(todosTable.id, ids))
 
-	revalidatePath("/")
+	revalidatePath("/app/teams", "layout")
 }
 
 export async function updateDueDate(id: string, payload: { dueDate: string | null }) {

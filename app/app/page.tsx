@@ -2,7 +2,7 @@ import { stackServerApp } from "@/lib/stack-auth/stack"
 import { redirect } from "next/navigation"
 import { ensureUserHasTeam } from "@/lib/stack-auth/utils"
 
-export default async function TodosPage() {
+export default async function AppPage() {
 	const user = await stackServerApp.getUser({ or: "redirect" })
 	
 	// Ensure user has a team and get their current team

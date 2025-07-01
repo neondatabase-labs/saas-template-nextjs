@@ -2,9 +2,9 @@ CREATE TABLE "projects" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"color" text DEFAULT '#4f46e5' NOT NULL,
+	"team_id" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"owner_id" text
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "stripe_customers" (
@@ -36,8 +36,8 @@ CREATE TABLE "todos" (
 	"completed" boolean DEFAULT false NOT NULL,
 	"due_date" timestamp,
 	"project_id" uuid,
+	"team_id" text,
 	"user_id" text,
-	"owner_id" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -59,10 +59,8 @@ CREATE TABLE "user_metrics" (
 -- 	"deleted_at" timestamp with time zone
 -- );
 --> statement-breakpoint
-ALTER TABLE "projects" ADD CONSTRAINT "projects_owner_id_users_sync_id_fk" FOREIGN KEY ("owner_id") REFERENCES "neon_auth"."users_sync"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "stripe_customers" ADD CONSTRAINT "stripe_customers_user_id_users_sync_id_fk" FOREIGN KEY ("user_id") REFERENCES "neon_auth"."users_sync"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "subscriptions" ADD CONSTRAINT "subscriptions_user_id_users_sync_id_fk" FOREIGN KEY ("user_id") REFERENCES "neon_auth"."users_sync"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "todos" ADD CONSTRAINT "todos_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "todos" ADD CONSTRAINT "todos_user_id_users_sync_id_fk" FOREIGN KEY ("user_id") REFERENCES "neon_auth"."users_sync"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "todos" ADD CONSTRAINT "todos_owner_id_users_sync_id_fk" FOREIGN KEY ("owner_id") REFERENCES "neon_auth"."users_sync"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_metrics" ADD CONSTRAINT "user_metrics_user_id_users_sync_id_fk" FOREIGN KEY ("user_id") REFERENCES "neon_auth"."users_sync"("id") ON DELETE no action ON UPDATE no action;

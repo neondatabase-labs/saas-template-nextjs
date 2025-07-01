@@ -22,6 +22,9 @@ export default async function SettingsPage({
 	const [userPlan, plansFlag] = await Promise.all([getStripePlan(user?.id), getPlansFlag()])
 	const plans = await plansFlag()
 	const contactChannels = await user?.listContactChannels()
+	
+	// Get user's teams
+	const teams = await user?.listTeams()
 
 	// Get user's todo metrics
 	const whenUserMetrics = user ? getUserTodoMetrics(user.id) : Promise.resolve(null)
@@ -42,6 +45,14 @@ export default async function SettingsPage({
 					isPrimary: channel.isPrimary,
 					isVerified: channel.isVerified,
 					usedForAuth: channel.usedForAuth,
+				})) ?? []
+			}
+			teams={
+				teams?.map((team) => ({
+					id: team.id,
+					displayName: team.displayName,
+					profileImageUrl: team.profileImageUrl,
+					isSelected: user?.selectedTeam?.id === team.id,
 				})) ?? []
 			}
 			todoMetrics={{

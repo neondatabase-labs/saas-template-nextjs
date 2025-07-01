@@ -13,7 +13,7 @@ export default function HomePage() {
 			</div>
 
 			<Button asChild type="button" size="lg">
-				<Link href="/app/todos">Go to Dashboard</Link>
+				<Link href="/app">Go to Dashboard</Link>
 			</Button>
 		</div>
 	)

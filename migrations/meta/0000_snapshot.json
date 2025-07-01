@@ -1,5 +1,5 @@
 {
-  "id": "b5e80aca-321e-48af-af74-15f0ee4ee7d1",
+  "id": "356f52dc-6f47-4d85-ac58-b732c6a280eb",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -28,6 +28,12 @@
           "notNull": true,
           "default": "'#4f46e5'"
         },
+        "team_id": {
+          "name": "team_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -41,31 +47,10 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
-        },
-        "owner_id": {
-          "name": "owner_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "projects_owner_id_users_sync_id_fk": {
-          "name": "projects_owner_id_users_sync_id_fk",
-          "tableFrom": "projects",
-          "tableTo": "users_sync",
-          "schemaTo": "neon_auth",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -276,14 +261,14 @@
           "primaryKey": false,
           "notNull": false
         },
-        "user_id": {
-          "name": "user_id",
+        "team_id": {
+          "name": "team_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "owner_id": {
-          "name": "owner_id",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -325,20 +310,6 @@
           "schemaTo": "neon_auth",
           "columnsFrom": [
             "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "todos_owner_id_users_sync_id_fk": {
-          "name": "todos_owner_id_users_sync_id_fk",
-          "tableFrom": "todos",
-          "tableTo": "users_sync",
-          "schemaTo": "neon_auth",
-          "columnsFrom": [
-            "owner_id"
           ],
           "columnsTo": [
             "id"

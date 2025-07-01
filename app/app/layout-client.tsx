@@ -15,11 +15,9 @@ import { useUser } from "@/lib/stack-auth/stack-client"
 import { useStackApp } from "@stackframe/stack"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
+import { TeamSwitcher } from "@/components/team-switcher"
 
-const navItems = [
-	{ label: "Dashboard", href: "/app/todos" },
-	{ label: "Settings", href: "/app/settings" },
-]
+const navItems: { label: string; href: string }[] = []
 
 export function AppLayoutClient({ children }: { children: React.ReactNode }) {
 	const user = useUser()
@@ -32,6 +30,8 @@ export function AppLayoutClient({ children }: { children: React.ReactNode }) {
 				<div className="font-bold text-lg uppercase tracking-tight">
 					<Link href="/app"> Neon Stripe </Link>
 				</div>
+
+				{user && <TeamSwitcher />}
 
 				{navItems.map((item) => (
 					<Button

@@ -30,12 +30,14 @@ export function ProjectSelector({
 	selectedProjectId,
 	onSelectProject,
 	onProjectAdded,
+	teamId,
 	...props
 }: {
 	projects: Project[]
 	selectedProjectId: string | null
 	onSelectProject: (projectId: string | null) => void
 	onProjectAdded?: (project: Project) => void
+	teamId: string
 } & ComponentProps<typeof PopoverTrigger>) {
 	const [open, setOpen] = useState(false)
 	const [isAddProjectOpen, setIsAddProjectOpen] = useState(false)
@@ -57,7 +59,7 @@ export function ProjectSelector({
 		const name = formData.get("name") as string
 		const color = formData.get("color") as string
 
-		const result = await addProject({ name, color })
+		const result = await addProject({ name, color, teamId })
 
 		if (result.success && result.project && onProjectAdded) {
 			onProjectAdded(result.project)
