@@ -34,7 +34,7 @@ export const todosTable = pgTable("todos", {
 	text: text("text").notNull(),
 	completed: boolean("completed").default(false).notNull(),
 	dueDate: timestamp("due_date"),
-	projectId: text("project_id").references(() => projectsTable.id),
+	projectId: uuid("project_id").references(() => projectsTable.id),
 	userId: text("user_id").references(() => usersSyncTable.id),
 	ownerId: text("owner_id").references(() => usersSyncTable.id),
 	createdAt,
