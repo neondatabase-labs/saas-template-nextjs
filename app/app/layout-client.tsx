@@ -19,7 +19,23 @@ import { TeamSwitcher } from "@/components/team-switcher"
 
 const navItems: { label: string; href: string }[] = []
 
-export function AppLayoutClient({ children }: { children: React.ReactNode }) {
+export function AppLayoutClient({
+	children,
+	teams,
+	selectedTeam,
+}: {
+	children: React.ReactNode
+	teams: Array<{
+		id: string
+		displayName: string
+		profileImageUrl: string | null
+	}>
+	selectedTeam: {
+		id: string
+		displayName: string
+		profileImageUrl: string | null
+	}
+}) {
 	const user = useUser()
 	const app = useStackApp()
 	const pathname = usePathname()
@@ -31,7 +47,7 @@ export function AppLayoutClient({ children }: { children: React.ReactNode }) {
 					<Link href="/app"> Neon Stripe </Link>
 				</div>
 
-				{user && <TeamSwitcher />}
+				{user && <TeamSwitcher teams={teams} selectedTeam={selectedTeam} />}
 
 				{navItems.map((item) => (
 					<Button

@@ -22,7 +22,7 @@ export default async function SettingsPage({
 	const [userPlan, plansFlag] = await Promise.all([getStripePlan(user?.id), getPlansFlag()])
 	const plans = await plansFlag()
 	const contactChannels = await user?.listContactChannels()
-	
+
 	// Get user's teams
 	const teams = await user?.listTeams()
 

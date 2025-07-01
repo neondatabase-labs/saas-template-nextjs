@@ -126,7 +126,9 @@ export function SettingsPageClient({
 		serverTeams,
 		(
 			current,
-			event: { type: "deleteTeam"; id: string } | { type: "restoreTeam"; team: typeof serverTeams[0] },
+			event:
+				| { type: "deleteTeam"; id: string }
+				| { type: "restoreTeam"; team: (typeof serverTeams)[0] },
 		) => {
 			if (event.type === "deleteTeam") {
 				return current.filter((team) => team.id !== event.id)
@@ -521,8 +523,7 @@ export function SettingsPageClient({
 							onClick={() => setTeamError(null)}
 							className="h-auto p-1 text-destructive hover:bg-destructive/20"
 						>
-							<span className="sr-only">Dismiss error</span>
-							×
+							<span className="sr-only">Dismiss error</span>×
 						</Button>
 					</div>
 				)}
@@ -562,15 +563,13 @@ export function SettingsPageClient({
 													</div>
 												</td>
 												<td className="p-3">
-													{team.isSelected && (
-														<Badge variant="secondary">Currently Selected</Badge>
-													)}
+													{team.isSelected && <Badge variant="secondary">Currently Selected</Badge>}
 												</td>
 												<td className="p-3 text-right">
 													<AlertDialog>
 														<AlertDialogTrigger asChild>
 															<Button
-																variant="ghost" 
+																variant="ghost"
 																size="sm"
 																className="text-destructive hover:text-destructive hover:bg-destructive/10"
 															>
@@ -582,7 +581,9 @@ export function SettingsPageClient({
 															<AlertDialogHeader>
 																<AlertDialogTitle>Delete Team</AlertDialogTitle>
 																<AlertDialogDescription>
-																	Are you sure you want to delete &quot;{team.displayName}&quot;? This action cannot be undone and all associated data will be permanently deleted.
+																	Are you sure you want to delete &quot;{team.displayName}&quot;?
+																	This action cannot be undone and all associated data will be
+																	permanently deleted.
 																</AlertDialogDescription>
 															</AlertDialogHeader>
 															<AlertDialogFooter>

@@ -2,6 +2,7 @@
 
 import { stackServerApp } from "@/lib/stack-auth/stack"
 import { revalidatePath } from "next/cache"
+import { redirect } from "next/navigation"
 
 export async function createTeam(formData: FormData) {
 	const teamName = formData.get("teamName") as string
@@ -26,13 +27,13 @@ export async function createTeam(formData: FormData) {
 
 		revalidatePath("/", "layout")
 
-		return { 
-			success: true, 
+		return {
+			success: true,
 			team: {
 				id: newTeam.id,
 				displayName: newTeam.displayName,
-				profileImageUrl: newTeam.profileImageUrl
-			}
+				profileImageUrl: newTeam.profileImageUrl,
+			},
 		}
 	} catch (error) {
 		console.error("Failed to create team:", error)
@@ -55,7 +56,7 @@ export async function deleteTeam(formData: FormData) {
 
 		// Check if user has access to this team by checking if they're a member
 		const userTeams = await user.listTeams()
-		const team = userTeams.find(userTeam => userTeam.id === teamId)
+		const team = userTeams.find((userTeam) => userTeam.id === teamId)
 		if (!team) {
 			return { error: "You don't have access to delete this team" }
 		}
@@ -73,5 +74,38 @@ export async function deleteTeam(formData: FormData) {
 	} catch (error) {
 		console.error("Failed to delete team:", error)
 		return { error: "Failed to delete team" }
+	}
+}
+
+export async function selectTeam(formData: FormData) {
+	const teamId = formData.get("teamId") as string
+
+	if (!teamId?.trim()) {
+		throw new Error("Team ID is required")
+	}
+
+	try {
+		const user = await stackServerApp.getUser({ or: "redirect" })
+		if (!user) {
+			throw new Error("User not found")
+		}
+
+		// Get the team to verify access
+		const team = await user.getTeam(teamId)
+		if (!team) {
+			throw new Error("Team not found or you don't have access")
+		}
+
+		// Set the team as selected
+		await user.setSelectedTeam(team)
+
+		// Revalidate layout to update team data
+		revalidatePath("/", "layout")
+
+		// Redirect to the selected team's todos
+		redirect(`/app/teams/${teamId}/todos`)
+	} catch (error) {
+		console.error("Failed to select team:", error)
+		throw error
 	}
 }

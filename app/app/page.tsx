@@ -1,13 +1,13 @@
 import { stackServerApp } from "@/lib/stack-auth/stack"
 import { redirect } from "next/navigation"
-import { ensureUserHasTeam } from "@/lib/stack-auth/utils"
 
 export default async function AppPage() {
 	const user = await stackServerApp.getUser({ or: "redirect" })
-	
-	// Ensure user has a team and get their current team
-	const currentTeam = await ensureUserHasTeam(user.id)
-	
-	// Redirect to their current team's todos
-	redirect(`/app/teams/${currentTeam.id}/todos`)
-} 
+
+	// User is guaranteed to have a selected team (ensured in layout)
+	if (!user.selectedTeam) {
+		throw new Error("User has no selected team - layout should have ensured this!")
+	}
+
+	redirect(`/app/teams/${user.selectedTeam.id}/todos`)
+}

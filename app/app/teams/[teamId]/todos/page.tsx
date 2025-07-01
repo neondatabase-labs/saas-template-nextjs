@@ -71,9 +71,7 @@ export default async function TeamTodosPage({
 		<div className="mx-auto max-w-5xl px-4 py-8">
 			<div className="flex items-center justify-between mb-8">
 				<h1 className="text-2xl font-semibold">Deadlines</h1>
-				<div className="text-sm text-gray-500">
-					Team: {userTeam.displayName}
-				</div>
+				<div className="text-sm text-gray-500">Team: {userTeam.displayName}</div>
 			</div>
 			<main>
 				<TodosPageClient todos={todos} projects={projects} todoLimit={todoLimit} teamId={teamId} />

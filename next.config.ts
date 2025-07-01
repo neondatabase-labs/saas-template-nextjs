@@ -21,8 +21,6 @@ export default withVercelToolbar()({
 		],
 	},
 
-
-
 	webpack: (config) => {
 		config.optimization.minimizer = [
 			new TerserPlugin({

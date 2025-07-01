@@ -11,7 +11,7 @@ export async function ensureUserHasTeam(userId: string) {
 	}
 
 	const teams = await user.listTeams()
-	
+
 	// If user has no teams, create a personal team
 	if (teams.length === 0) {
 		const personalTeam = await user.createTeam({
