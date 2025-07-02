@@ -46,6 +46,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Card, CardTitle, CardHeader, CardDescription, CardFooter } from "@/components/ui/card"
 import { SubscriptionPlan } from "@/lib/stripe/plans"
+import { TeamManagementModal } from "./team-management-modal"
 
 export function SettingsPageClient({
 	contactChannels: serverContactChannels,
@@ -559,7 +560,14 @@ export function SettingsPageClient({
 																<Users className="h-4 w-4 text-muted-foreground" />
 															)}
 														</div>
-														<span className="font-medium">{team.displayName}</span>
+														<TeamManagementModal team={team}>
+															<Button
+																variant="ghost"
+																className="font-medium hover:underline p-0 h-auto"
+															>
+																{team.displayName}
+															</Button>
+														</TeamManagementModal>
 													</div>
 												</td>
 												<td className="p-3">
