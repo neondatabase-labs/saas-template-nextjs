@@ -164,7 +164,7 @@ export async function inviteUserToTeam(formData: FormData) {
 		}
 
 		// Invite the user to the team
-		const callbackUrl = `${process.env.NEXT_PUBLIC_ORIGIN}/app/teams/${validTeamId}/todos`
+		const callbackUrl = `${process.env.NEXT_PUBLIC_ORIGIN}/app/teams/${validTeamId}/accept`
 		await team.inviteUser({
 			email: validEmail,
 			callbackUrl,
