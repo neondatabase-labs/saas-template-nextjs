@@ -26,7 +26,11 @@ async function acceptTeamInvitation(code: string) {
 
 		if (!response.ok) {
 			const errorData = await response.json().catch(() => ({}))
-			throw new Error(errorData.message || `HTTP ${response.status}: Failed to accept invitation`)
+			console.error(errorData)
+			throw new Error(
+				errorData.message ||
+					`HTTP ${response.status}: Failed to accept invitation: ${response.statusText}`,
+			)
 		}
 
 		return await response.json()
