@@ -33,7 +33,7 @@ const events: Stripe.WebhookEndpointCreateParams.EnabledEvent[] = [
 ]
 
 console.log("🔄 Setting up Stripe webhook endpoint...")
-const url = `${process.env.NEXT_PUBLIC_VERCEL_URL}/api/stripe`
+const url = `${process.env.NEXT_PUBLIC_ORIGIN}/api/stripe`
 
 if (url.includes("localhost:")) {
 	throw new Error("Cannot register webhook to localhost, ")

@@ -133,7 +133,7 @@ QSTASH_URL=
 
 Once you have the setup complete, you can copy-paste your `.env` file in the Vercel dashboard's `Settings` > `Environment Variables` section and deploy your project.
 
-Make sure to update the `NEXT_PUBLIC_VERCEL_URL` environment variable to your custom domain for production (instead of `http://localhost:3000`).
+Make sure to update the `NEXT_PUBLIC_ORIGIN` environment variable to your custom domain for production (instead of `http://localhost:3000`).
 
 ## Development
 

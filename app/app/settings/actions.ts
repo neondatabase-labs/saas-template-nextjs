@@ -202,7 +202,7 @@ export async function sendVerificationEmail(formData: FormData) {
 		{
 			method: "POST",
 			body: JSON.stringify({
-				callback_url: `http://localhost:3000/app/settings`,
+				callback_url: `${process.env.NEXT_PUBLIC_ORIGIN}/app/settings`,
 			}),
 			headers: {
 				"Content-Type": "application/json",
