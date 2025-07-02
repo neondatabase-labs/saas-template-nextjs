@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation"
 import { cookies } from "next/headers"
 import { getAccessToken, stackServerApp } from "@/lib/stack-auth/stack"
+import { ensureUserHasTeam } from "@/lib/stack-auth/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle } from "lucide-react"
-import { User } from "@stackframe/stack"
 
 interface AcceptInvitationPageProps {
 	params: Promise<{ teamId: string }>

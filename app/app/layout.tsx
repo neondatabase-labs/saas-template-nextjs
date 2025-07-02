@@ -3,9 +3,16 @@ import { stackServerApp } from "@/lib/stack-auth/stack"
 import { ensureUserHasTeam } from "@/lib/stack-auth/utils"
 import { AppLayoutClient } from "./layout-client"
 
-export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({
+	children,
+	params,
+}: {
+	children: React.ReactNode
+	params: { teamId: string | null | undefined }
+}) {
+	const { teamId } = await params
 	const user = await stackServerApp.getUser({ or: "redirect" })
-	const selectedTeam = await ensureUserHasTeam(user.id)
+	const selectedTeam = await ensureUserHasTeam(user.id, teamId)
 	const teams = await user.listTeams()
 	return (
 		<StackAuthProvider>
