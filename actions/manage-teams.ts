@@ -269,12 +269,21 @@ export async function leaveTeam(formData: FormData) {
 			}
 		}
 
-		// Leave the team
-		await user.leaveTeam(team)
+		// Check if user is the only member
+		const members = await team.listUsers()
+		const isOnlyMember = members.length === 1 && members[0].id === user.id
 
-		revalidatePath("/app/settings")
-
-		return { success: true, message: "You have left the team" }
+		if (isOnlyMember) {
+			// If user is the only member, delete the team instead of leaving
+			await team.delete()
+			revalidatePath("/app/settings")
+			return { success: true, message: "Team deleted successfully (you were the only member)" }
+		} else {
+			// Otherwise, just leave the team
+			await user.leaveTeam(team)
+			revalidatePath("/app/settings")
+			return { success: true, message: "You have left the team" }
+		}
 	} catch (error) {
 		console.error("Failed to leave team:", error)
 		return { error: "Failed to leave team" }
