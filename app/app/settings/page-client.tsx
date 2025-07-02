@@ -47,6 +47,7 @@ import { cn } from "@/lib/utils"
 import { Card, CardTitle, CardHeader, CardDescription, CardFooter } from "@/components/ui/card"
 import { SubscriptionPlan } from "@/lib/stripe/plans"
 import { TeamManagementModal } from "./team-management-modal"
+import { toast } from "sonner"
 
 export function SettingsPageClient({
 	contactChannels: serverContactChannels,
@@ -605,6 +606,9 @@ export function SettingsPageClient({
 																			// Restore the team if there was an error
 																			sendTeamEvent({ type: "restoreTeam", team })
 																			setTeamError(result.error)
+																		} else if (result?.message) {
+																			// Show success message via toast
+																			toast.success(result.message)
 																		}
 																	}}
 																>

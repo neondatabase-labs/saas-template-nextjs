@@ -61,11 +61,36 @@ export async function deleteTeam(formData: FormData) {
 			return { error: "You cannot delete your selected team" }
 		}
 
-		await team.delete()
+		// Check if there are other members with admin permissions
+		const members = await team.listUsers()
+		const otherAdmins = await Promise.all(
+			members
+				.filter((member: any) => member.id !== user.id)
+				.map(async (member: any) => {
+					try {
+						const memberUser = await stackServerApp.getUser(member.id)
+						if (!memberUser) return false
+						const hasDeletePermission = await memberUser.hasPermission(team, "$delete_team")
+						return hasDeletePermission
+					} catch {
+						return false
+					}
+				}),
+		)
 
-		revalidatePath("/", "layout")
+		const hasOtherAdmins = otherAdmins.some(Boolean)
 
-		return { success: true }
+		if (hasOtherAdmins) {
+			// If there are other admins, just leave the team instead of deleting it
+			await user.leaveTeam(team)
+			revalidatePath("/", "layout")
+			return { success: true, message: "Left team successfully" }
+		} else {
+			// If no other admins, delete the team
+			await team.delete()
+			revalidatePath("/", "layout")
+			return { success: true, message: "Team deleted successfully" }
+		}
 	} catch (error) {
 		console.error("Failed to delete team:", error)
 		return { error: "Failed to delete team" }
@@ -139,7 +164,11 @@ export async function inviteUserToTeam(formData: FormData) {
 		}
 
 		// Invite the user to the team
-		await team.inviteUser({ email: validEmail })
+		const callbackUrl = `${process.env.NEXT_PUBLIC_ORIGIN}/app/teams/${validTeamId}/todos`
+		await team.inviteUser({
+			email: validEmail,
+			callbackUrl,
+		})
 
 		revalidatePath("/app/settings")
 
