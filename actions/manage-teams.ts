@@ -170,7 +170,7 @@ export async function inviteUserToTeam(formData: FormData) {
 			callbackUrl,
 		})
 
-		revalidatePath("/app/settings")
+		revalidatePath("/", "layout")
 
 		return { success: true, message: `Invitation sent to ${validEmail}` }
 	} catch (error) {
@@ -236,7 +236,7 @@ export async function removeUserFromTeam(formData: FormData) {
 		// Remove the user from the team
 		await team.removeUser(validUserId)
 
-		revalidatePath("/app/settings")
+		revalidatePath("/", "layout")
 
 		return { success: true, message: "User removed from team" }
 	} catch (error) {
@@ -276,12 +276,12 @@ export async function leaveTeam(formData: FormData) {
 		if (isOnlyMember) {
 			// If user is the only member, delete the team instead of leaving
 			await team.delete()
-			revalidatePath("/app/settings")
+			revalidatePath("/", "layout")
 			return { success: true, message: "Team deleted successfully (you were the only member)" }
 		} else {
 			// Otherwise, just leave the team
 			await user.leaveTeam(team)
-			revalidatePath("/app/settings")
+			revalidatePath("/", "layout")
 			return { success: true, message: "You have left the team" }
 		}
 	} catch (error) {
