@@ -19,6 +19,7 @@ async function acceptTeamInvitation(code: string) {
 					"X-Stack-Project-Id": stackServerApp.projectId,
 					"X-Stack-Publishable-Client-Key": process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!,
 					"X-Stack-Secret-Server-Key": process.env.STACK_SECRET_SERVER_KEY!,
+					"X-Stack-Access-Type": "server",
 				},
 				body: JSON.stringify({ code }),
 			},
