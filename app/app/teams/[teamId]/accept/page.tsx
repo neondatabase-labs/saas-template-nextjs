@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation"
-import { stackServerApp } from "@/lib/stack-auth/stack"
+import { cookies } from "next/headers"
+import { getAccessToken, stackServerApp } from "@/lib/stack-auth/stack"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertTriangle, CheckCircle2 } from "lucide-react"
+import { AlertTriangle } from "lucide-react"
 
 interface AcceptInvitationPageProps {
 	params: Promise<{ teamId: string }>
@@ -9,6 +10,11 @@ interface AcceptInvitationPageProps {
 }
 
 async function acceptTeamInvitation(code: string) {
+	const accessToken = await getAccessToken(await cookies())
+	if (!accessToken) {
+		throw new Error("No access token found")
+	}
+
 	try {
 		const response = await fetch(
 			`${process.env.STACK_API_URL || "https://api.stack-auth.com"}/api/v1/team-invitations/accept`,
@@ -20,6 +26,7 @@ async function acceptTeamInvitation(code: string) {
 					"X-Stack-Publishable-Client-Key": process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!,
 					"X-Stack-Secret-Server-Key": process.env.STACK_SECRET_SERVER_KEY!,
 					"X-Stack-Access-Type": "server",
+					"X-Stack-Access-Token": accessToken,
 				},
 				body: JSON.stringify({ code }),
 			},

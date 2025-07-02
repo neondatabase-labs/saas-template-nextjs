@@ -93,8 +93,6 @@ export function TeamManagementModal({ team, children }: TeamManagementModalProps
 			if (result.success) {
 				toast.success(result.message)
 				setEmail("")
-				// Reload members to show any new pending invites
-				loadMembers()
 			} else {
 				toast.error(result.error)
 			}
@@ -298,8 +296,8 @@ export function TeamManagementModal({ team, children }: TeamManagementModalProps
 					{/* Invite User */}
 					<div>
 						<h3 className="font-medium mb-3">Invite New Member</h3>
-						<form onSubmit={handleInvite} className="space-y-3">
-							<div>
+						<form onSubmit={handleInvite} className="space-y-4">
+							<div className="space-y-2">
 								<Label htmlFor="invite-email">Email Address</Label>
 								<Input
 									id="invite-email"
