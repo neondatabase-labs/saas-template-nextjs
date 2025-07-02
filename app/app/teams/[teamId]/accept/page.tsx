@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import { getAccessToken, stackServerApp } from "@/lib/stack-auth/stack"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle } from "lucide-react"
+import { User } from "@stackframe/stack"
 
 interface AcceptInvitationPageProps {
 	params: Promise<{ teamId: string }>
@@ -52,10 +53,10 @@ export default async function AcceptInvitationPage({
 	params,
 	searchParams,
 }: AcceptInvitationPageProps) {
+	await stackServerApp.getUser({ or: "redirect" })
 	const { teamId } = await params
 	const { code } = await searchParams
 
-	// If no code is provided, show error
 	if (!code) {
 		return (
 			<div className="container max-w-md mx-auto py-16 px-4">
@@ -75,9 +76,6 @@ export default async function AcceptInvitationPage({
 	// Try to accept the invitation
 	try {
 		await acceptTeamInvitation(code)
-
-		// On success, redirect to the team's todos page
-		redirect(`/app/teams/${teamId}/todos`)
 	} catch (error) {
 		// On error, show error message
 		const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred"
@@ -99,4 +97,7 @@ export default async function AcceptInvitationPage({
 			</div>
 		)
 	}
+
+	// On success, redirect to the team's todos page
+	redirect(`/app/teams/${teamId}/todos`)
 }

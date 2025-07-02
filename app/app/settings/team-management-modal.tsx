@@ -11,7 +11,7 @@ import {
 	DialogTrigger,
 } from "@/components/ui/dialog"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { Users, Mail, Plus, Loader2, X, UserMinus } from "lucide-react"
+import { Users, Plus, Loader2, X, UserMinus } from "lucide-react"
 import { useEffect, useState } from "react"
 import {
 	inviteUserToTeam,
@@ -297,7 +297,7 @@ export function TeamManagementModal({ team, children }: TeamManagementModalProps
 					<div>
 						<h3 className="font-medium mb-3">Invite New Member</h3>
 						<form onSubmit={handleInvite} className="space-y-4">
-							<div className="space-y-2">
+							<div className="space-y-4">
 								<Label htmlFor="invite-email">Email Address</Label>
 								<Input
 									id="invite-email"
