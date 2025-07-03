@@ -11,7 +11,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { useUser } from "@/lib/stack-auth/stack-client"
+import { useRequiredUser } from "@/lib/stack-auth/stack-client"
 import { useStackApp } from "@stackframe/stack"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -36,7 +36,7 @@ export function AppLayoutClient({
 		profileImageUrl: string | null
 	}
 }) {
-	const user = useUser()
+	const user = useRequiredUser()
 	const app = useStackApp()
 	const pathname = usePathname()
 

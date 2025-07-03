@@ -16,7 +16,7 @@ import {
 	TrashIcon,
 } from "lucide-react"
 import { startTransition, useOptimistic, useRef, useState } from "react"
-import { useUser } from "@/lib/stack-auth/stack-client"
+import { useRequiredUser } from "@/lib/stack-auth/stack-client"
 import Image from "next/image"
 import { ImageInput } from "@/components/image-input"
 import {
@@ -79,7 +79,7 @@ export function SettingsPageClient({
 		isSelected: boolean
 	}>
 }) {
-	const user = useUser({ or: "redirect" })
+	const user = useRequiredUser()
 	const formRef = useRef<HTMLFormElement>(null)
 	const [profileError, setProfileError] = useState("")
 	const [passwordError, setPasswordError] = useState<string | null>(null)

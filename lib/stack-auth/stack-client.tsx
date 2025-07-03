@@ -4,7 +4,6 @@ import { createContext, use, useCallback, type ReactNode, startTransition, useEf
 import { useUser as baseUseUser, CurrentUser, User } from "@stackframe/stack"
 import { z } from "zod"
 import { useOptimistic } from "react"
-import { redirect } from "next/navigation"
 
 const DISPLAY_NAME_MAX_LENGTH = 60
 const DisplayNameSchema = z.string().max(DISPLAY_NAME_MAX_LENGTH)
@@ -25,7 +24,6 @@ const CustomUserContext = createContext<
 				usedForAuth: boolean
 			}>
 	  })
-	| null // user is not logged in
 	| undefined // useUser is not within CustomUserProvider
 >(undefined)
 
@@ -33,11 +31,11 @@ const CustomUserContext = createContext<
 // so the way to get best performance here is a custom UserProvider that sets our local state
 // and then updates the StackAuth profile in the background
 export function CustomUserProvider({ children }: { children: ReactNode }) {
-	const baseUser = baseUseUser()
+	const baseUser = baseUseUser({ or: "redirect" })
 
 	// we don't need to useOptimistic for contact channels here because they're only used in settings
 	// so we can useOptimistic where we actually work with them
-	const contactChannels = baseUser?.useContactChannels()
+	const contactChannels = baseUser.useContactChannels()
 
 	// We do useOptimistic here because we want to update the nav layout instantly
 	// even when the user is modified in a specific component
@@ -76,36 +74,20 @@ export function CustomUserProvider({ children }: { children: ReactNode }) {
 		}
 	}, [baseUser, update])
 
-	const customUser = optimisticUser
-		? {
-				...optimisticUser,
-				setDisplayName: undefined, // stop consumers from using this
-				update,
-				contactChannels: contactChannels ?? [],
-			}
-		: null
+	const customUser = {
+		...optimisticUser,
+		setDisplayName: undefined, // stop consumers from using this
+		update,
+		contactChannels: contactChannels ?? [],
+	}
 
 	return <CustomUserContext.Provider value={customUser}>{children}</CustomUserContext.Provider>
 }
 
-export function useUser(options?: { or: "redirect" | "throw" }) {
-	const customUser = use(CustomUserContext)
-
-	if (customUser) {
-		return customUser
-	}
-
-	if (customUser === undefined) {
+export function useRequiredUser() {
+	const user = use(CustomUserContext)
+	if (user === undefined) {
 		throw new Error("useUser must be used within a CustomUserProvider")
 	}
-
-	if (options?.or === "throw") {
-		throw new Error("User is not logged in")
-	}
-
-	if (options?.or === "redirect") {
-		redirect("/handler/sign-in")
-	}
-
-	throw new Error("Unhandled option")
+	return user
 }

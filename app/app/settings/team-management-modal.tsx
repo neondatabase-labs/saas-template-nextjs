@@ -20,7 +20,7 @@ import {
 	leaveTeam,
 } from "@/actions/manage-teams"
 import { toast } from "sonner"
-import { useUser } from "@/lib/stack-auth/stack-client"
+import { useRequiredUser } from "@/lib/stack-auth/stack-client"
 import {
 	AlertDialog,
 	AlertDialogTrigger,
@@ -49,7 +49,7 @@ interface TeamManagementModalProps {
 }
 
 export function TeamManagementModal({ team, children }: TeamManagementModalProps) {
-	const currentUser = useUser({ or: "redirect" })
+	const currentUser = useRequiredUser()
 	const [isOpen, setIsOpen] = useState(false)
 	const [members, setMembers] = useState<TeamMember[]>([])
 	const [loading, setLoading] = useState(false)
