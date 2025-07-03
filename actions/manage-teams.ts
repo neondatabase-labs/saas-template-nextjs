@@ -1,9 +1,10 @@
 "use server"
 
-import { stackServerApp } from "@/lib/stack-auth/stack"
+import { stackServerApp, getAccessToken } from "@/lib/stack-auth/stack"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { z } from "zod"
+import { cookies } from "next/headers"
 
 export async function createTeam(formData: FormData) {
 	const teamName = formData.get("teamName") as string
@@ -118,13 +119,13 @@ export async function selectTeam(formData: FormData) {
 
 		// Revalidate layout to update team data
 		revalidatePath("/", "layout")
-
-		// Redirect to the selected team's todos
-		redirect(`/app/teams/${teamId}/todos`)
 	} catch (error) {
 		console.error("Failed to select team:", error)
 		throw error
 	}
+
+	// Redirect to the selected team's todos
+	redirect(`/app/teams/${teamId}/todos`)
 }
 
 const inviteUserSchema = z.object({
@@ -288,4 +289,46 @@ export async function leaveTeam(formData: FormData) {
 		console.error("Failed to leave team:", error)
 		return { error: "Failed to leave team" }
 	}
+}
+
+export async function acceptTeamInvitation(code: string, teamId: string) {
+	const accessToken = await getAccessToken(await cookies())
+	if (!accessToken) {
+		throw new Error("No access token found")
+	}
+
+	try {
+		const response = await fetch(
+			`${process.env.STACK_API_URL || "https://api.stack-auth.com"}/api/v1/team-invitations/accept`,
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"X-Stack-Project-Id": stackServerApp.projectId,
+					"X-Stack-Publishable-Client-Key": process.env.NEXT_PUBLIC_STACK_PUBLISHABLE_CLIENT_KEY!,
+					"X-Stack-Secret-Server-Key": process.env.STACK_SECRET_SERVER_KEY!,
+					"X-Stack-Access-Type": "server",
+					"X-Stack-Access-Token": accessToken,
+				},
+				body: JSON.stringify({ code }),
+			},
+		)
+
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}))
+			console.error(errorData)
+			throw new Error(
+				errorData.message ||
+					`HTTP ${response.status}: Failed to accept invitation: ${response.statusText}`,
+			)
+		}
+	} catch (error) {
+		console.error("Failed to accept team invitation:", error)
+		throw error
+	}
+
+	revalidatePath("/", "layout")
+
+	// Redirect to the team's todos page after successful acceptance
+	redirect(`/app/teams/${teamId}/todos`)
 }

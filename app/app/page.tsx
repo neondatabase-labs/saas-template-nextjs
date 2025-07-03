@@ -4,6 +4,6 @@ import { redirect } from "next/navigation"
 
 export default async function AppPage() {
 	const user = await stackServerApp.getUser({ or: "redirect" })
-	const selectedTeam = await ensureUserHasTeam(user.id)
+	const selectedTeam = await ensureUserHasTeam(user)
 	redirect(`/app/teams/${selectedTeam.id}/todos`)
 }

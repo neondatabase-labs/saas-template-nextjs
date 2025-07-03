@@ -8,11 +8,11 @@ export default async function AuthLayout({
 	params,
 }: {
 	children: React.ReactNode
-	params: { teamId: string | null | undefined }
+	params: Promise<{ teamId: string | null | undefined }>
 }) {
 	const { teamId } = await params
 	const user = await stackServerApp.getUser({ or: "redirect" })
-	const selectedTeam = await ensureUserHasTeam(user.id, teamId)
+	const selectedTeam = await ensureUserHasTeam(user, teamId)
 	const teams = await user.listTeams()
 	return (
 		<StackAuthProvider>

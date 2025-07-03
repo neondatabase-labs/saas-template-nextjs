@@ -1,15 +1,10 @@
-import { stackServerApp } from "./stack"
+import { ServerUser } from "@stackframe/stack"
 
 export function getLoginUrl(afterAuthReturnTo: string) {
 	return `${process.env.NEXT_PUBLIC_ORIGIN}/handler/login?after_auth_return_to=${encodeURIComponent(afterAuthReturnTo)}`
 }
 
-export async function ensureUserHasTeam(userId: string, teamId?: string | null) {
-	const user = await stackServerApp.getUser(userId)
-	if (!user) {
-		throw new Error("User not found")
-	}
-
+export async function ensureUserHasTeam(user: ServerUser, teamId?: string | null) {
 	const teams = await user.listTeams()
 
 	// If a specific teamId is requested, try to select that team
@@ -38,13 +33,4 @@ export async function ensureUserHasTeam(userId: string, teamId?: string | null) 
 	}
 
 	return user.selectedTeam || teams[0]
-}
-
-export async function getCurrentTeamOrRedirect() {
-	const user = await stackServerApp.getUser()
-	if (!user) {
-		return null
-	}
-
-	return await ensureUserHasTeam(user.id)
 }
