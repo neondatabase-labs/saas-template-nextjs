@@ -53,7 +53,7 @@ export default async function TeamTodosPage({
 	const userTeam = user.getTeam ? await user.getTeam(teamId) : null
 	if (!userTeam) {
 		// If team not found, redirect to ensure user has a team
-		await ensureUserHasTeam(user.id)
+		await ensureUserHasTeam(user)
 		redirect("/app")
 	}
 
