@@ -1,6 +1,7 @@
 ---
 description: Stack Auth is the authentication service of choice for creating and managing user authentication and authorization.
 globs: *.tsx, *.ts
+alwaysApply: false
 ---
 # Stack Auth Guidelines
 ## Setup Guidelines
@@ -27,11 +28,10 @@ globs: *.tsx, *.ts
   }
   ```
 ## User Management Guidelines
-- In Client Components, use the `useUser()` hook to retrieve the current user (it returns `null` when not signed in).
+- In Client Components, use the `useRequiredUser()` hook to retrieve the current user.
 - Update user details using `user.update({...})` and sign out via `user.signOut()`.
-- For pages that require a user, call `useUser({ or: "redirect" })` so unauthorized visitors are automatically redirected.
 ## Client Component Guidelines
-- Client Components rely on hooks like `useUser()` and `useStackApp()`.
+- Client Components rely on hooks like `useRequiredUser()` and `useStackApp()`.
 - Example:
   
   ```tsx
@@ -55,7 +55,7 @@ globs: *.tsx, *.ts
   ```
 ## Page Protection Guidelines
 - Protect pages by:
-  - Using `useUser({ or: "redirect" })` in Client Components.
+  - Using `useRequiredUser()` in Client Components.
   - Using `await stackServerApp.getUser({ or: "redirect" })` in Server Components.
   - Implementing middleware that checks for a user and redirects to `/handler/sign-in` if not found.
 - Example middleware:
